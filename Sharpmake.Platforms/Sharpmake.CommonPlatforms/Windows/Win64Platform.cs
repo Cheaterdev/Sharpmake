@@ -506,6 +506,13 @@ namespace Sharpmake
                         generator.Write(Vcxproj.Template.Project.PropertyGroupEnd);
                     }
                 }
+
+                using (generator.Declare("platformName", SimplePlatformString))
+                {
+                    generator.Write(Vcxproj.Template.Project.VcpkgStart);
+                    generator.Write(@"<VcpkgEnableManifest>true</VcpkgEnableManifest>");
+                    generator.Write(Vcxproj.Template.Project.VcpkgEnd);
+                }
             }
             #endregion
         }

@@ -68,6 +68,14 @@ namespace Sharpmake.Generators.VisualStudio
 @"  </PropertyGroup>
 ";
 
+                public static string VcpkgStart =
+    @"  <PropertyGroup Label=""Vcpkg"" Condition=""'$(Platform)'=='[platformName]'"">
+";
+
+                public static string VcpkgEnd =
+@"  </PropertyGroup>
+";
+
                 public static string ImportCppDefaultProps =
 @"  <Import Project=""[vcTargetsPath]\Microsoft.Cpp.Default.props"" />
 ";
