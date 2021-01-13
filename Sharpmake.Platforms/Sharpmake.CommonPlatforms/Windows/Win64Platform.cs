@@ -511,6 +511,7 @@ namespace Sharpmake
                 {
                     generator.Write(Vcxproj.Template.Project.VcpkgStart);
                     generator.Write(@"<VcpkgEnableManifest>true</VcpkgEnableManifest>");
+                    generator.Write(@"<VcpkgConfiguration>Release</VcpkgConfiguration>");
                     generator.Write(Vcxproj.Template.Project.VcpkgEnd);
                 }
             }
