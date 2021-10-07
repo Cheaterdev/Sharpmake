@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Ubisoft Entertainment
+// Copyright (c) 2018-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ namespace Sharpmake
     {
         // cppPlatformFolders (pre-vs2019)
         private static readonly ConcurrentDictionary<Tuple<DevEnv, string>, string> s_cppPlatformFolders = new ConcurrentDictionary<Tuple<DevEnv, string>, string>();
+        private static bool s_overrideGlobalVCTargetsPath = false;
 
         /// <summary>
         /// Allows overwriting the MSBuild platform folder used for a known sharpmake platform and Visual Studio version.
@@ -94,7 +95,7 @@ namespace Sharpmake
         }
 
 
-        // additionalVCTargetsPath (vs2019)
+        // additionalVCTargetsPath (vs2019+)
         private static readonly ConcurrentDictionary<Tuple<DevEnv, string>, string> s_additionalVCTargetsPath = new ConcurrentDictionary<Tuple<DevEnv, string>, string>();
 
         /// <summary>
@@ -112,7 +113,7 @@ namespace Sharpmake
 
         /// <summary>
         /// Allows setting MSBuild vc target path used for a custom platform passed as a string and Visual Studio version.
-        /// This is typically used if you want to add platform specific files with vs2019 as the older way of doing it through _PlatformFolder is deprecated.
+        /// This is typically used if you want to add platform specific files with vs2019+ as the older way of doing it through _PlatformFolder is deprecated.
         /// </summary>
         /// <param name="devEnv">Visual studio version affected</param>
         /// <param name="platform">Platform affected</param>
@@ -139,7 +140,7 @@ namespace Sharpmake
 
         /// <summary>
         /// Get the MSBuild Additional VC targets path used for a known sharpmake platform and Visual studio version.
-        /// This is typically used if you want to add platform specific files with vs2019 as the older way of doing it through _PlatformFolder is deprecated.
+        /// This is typically used if you want to add platform specific files with vs2019+ as the older way of doing it through _PlatformFolder is deprecated.
         /// </summary>
         /// <param name="devEnv">Visual studio version affected</param>
         /// <param name="platform">Platform affected</param>
@@ -151,7 +152,7 @@ namespace Sharpmake
 
         /// <summary>
         /// Get the MSBuild Additional VC targets path used for a custom platform passed as a string and Visual studio version.
-        /// This is typically used if you want to add platform specific files with vs2019 as the older way of doing it through _PlatformFolder is deprecated.
+        /// This is typically used if you want to add platform specific files with vs2019+ as the older way of doing it through _PlatformFolder is deprecated.
         /// </summary>
         /// <param name="devEnv">Visual studio version affected</param>
         /// <param name="platform">Platform affected</param>
@@ -163,6 +164,16 @@ namespace Sharpmake
             if (s_additionalVCTargetsPath.TryGetValue(key, out value))
                 return value;
             return null; // No override found
+        }
+
+        public static void SetOverrideGlobalVCTargetsPath(bool overrideGlobalVCTargetsPath)
+        {
+            s_overrideGlobalVCTargetsPath = overrideGlobalVCTargetsPath;
+        }
+
+        public static bool IsOverridingGlobalVCTargetsPath()
+        {
+            return s_overrideGlobalVCTargetsPath;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2019-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ namespace SharpmakeGen.FunctionalTests
             var targets = new List<ITarget> {
                 new Target(
                     Platform.win64,
-                    DevEnv.vs2017,
+                    DevEnv.vs2019,
                     Optimization.Debug | Optimization.Release,
                     Blob.NoBlob,
                     BuildSystem.MSBuild
@@ -539,9 +539,11 @@ namespace SharpmakeGen.FunctionalTests
             FileInfo fileInfo = Util.GetCurrentSharpmakeFileInfo();
             string sharpmakeRootDirectory = Util.SimplifyPath(Path.Combine(fileInfo.DirectoryName, "..", ".."));
 
-            FastBuildSettings.FastBuildMakeCommand = Path.Combine(sharpmakeRootDirectory, @"tools\FastBuild\FBuild.exe");
+            FastBuildSettings.FastBuildMakeCommand = Path.Combine(sharpmakeRootDirectory, @"tools\FastBuild\Windows-x64\FBuild.exe");
             FastBuildSettings.FastBuildWait = true;
             FastBuildSettings.WriteAllConfigsSection = true;
+
+            KitsRootPaths.SetUseKitsRootForDevEnv(DevEnv.vs2019, KitsRootEnum.KitsRoot10, Options.Vc.General.WindowsTargetPlatformVersion.v10_0_19041_0);
 
             Bff.UnityResolver = new Bff.FragmentUnityResolver();
 

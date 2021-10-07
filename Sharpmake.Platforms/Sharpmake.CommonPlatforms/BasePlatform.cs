@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,11 +61,6 @@ namespace Sharpmake
             return string.Empty;
         }
 
-        public virtual bool AddLibPrefix(Configuration conf)
-        {
-            return false;
-        }
-
         public virtual void SelectPreprocessorDefinitionsBff(IBffGenerationContext context)
         {
             var platformDescriptor = PlatformRegistry.Get<IPlatformDescriptor>(context.Configuration.Platform);
@@ -109,12 +104,6 @@ namespace Sharpmake
             }
         }
 
-        [Obsolete("Use " + nameof(SetupExtraLinkerSettings) + " and pass the conf")]
-        public virtual void SetupExtraLinkerSettings(IFileGenerator fileGenerator, Project.Configuration.OutputType outputType, string fastBuildOutputFile)
-        {
-            SetupExtraLinkerSettings(fileGenerator, outputType);
-        }
-
         public virtual void SetupExtraLinkerSettings(IFileGenerator fileGenerator, Project.Configuration configuration, string fastBuildOutputFile)
         {
             SetupExtraLinkerSettings(fileGenerator, configuration.Output);
@@ -141,12 +130,12 @@ namespace Sharpmake
         #endregion
 
         #region IPlatformVcxproj implementation
-        public abstract string ExecutableFileExtension { get; }
-        public virtual string PackageFileExtension => ExecutableFileExtension;
-        public abstract string SharedLibraryFileExtension { get; }
-        public abstract string ProgramDatabaseFileExtension { get; }
-        public virtual string StaticLibraryFileExtension => "lib";
-        public virtual string StaticOutputLibraryFileExtension => StaticLibraryFileExtension;
+        public abstract string ExecutableFileFullExtension { get; }
+        public virtual string PackageFileFullExtension => ExecutableFileFullExtension;
+        public abstract string SharedLibraryFileFullExtension { get; }
+        public abstract string ProgramDatabaseFileFullExtension { get; }
+        public virtual string StaticLibraryFileFullExtension => ".lib";
+        public virtual string StaticOutputLibraryFileFullExtension => StaticLibraryFileFullExtension;
         public virtual bool ExcludesPrecompiledHeadersFromBuild => false;
         public virtual bool HasUserAccountControlSupport => false;
         public virtual bool HasEditAndContinueDebuggingSupport => false;
@@ -205,11 +194,6 @@ namespace Sharpmake
             yield break;
         }
 
-        public virtual string GetOutputFileNamePrefix(IGenerationContext context, Project.Configuration.OutputType outputType)
-        {
-            return string.Empty;
-        }
-
         public virtual void SetupSdkOptions(IGenerationContext context)
         {
         }
@@ -225,6 +209,63 @@ namespace Sharpmake
         }
 
         public virtual void SelectCompilerOptions(IGenerationContext context)
+        {
+        }
+
+        protected void FixupPrecompiledHeaderOptions(IGenerationContext context)
+        {
+            var options = context.Options;
+            var cmdLineOptions = context.CommandLineOptions;
+            var conf = context.Configuration;
+
+            if (options["UsePrecompiledHeader"] == "NotUsing")
+            {
+                options["UsePrecompiledHeader"] = FileGeneratorUtilities.RemoveLineTag;
+            }
+            else
+            {
+                Strings pathsToConsider = new Strings(context.ProjectSourceCapitalized);
+                pathsToConsider.AddRange(context.Project.AdditionalSourceRootPaths);
+                pathsToConsider.AddRange(GetIncludePaths(context));
+
+                string pchFileSourceRelative = context.Options["PrecompiledHeaderThrough"];
+
+                string pchFileVcxprojRelative = null;
+                bool foundPchInclude = false;
+
+                foreach (var includePath in pathsToConsider)
+                {
+                    var pchFile = Util.PathGetAbsolute(includePath, pchFileSourceRelative);
+                    if (conf.Project.ResolvedSourceFiles.Contains(pchFile))
+                    {
+                        pchFileVcxprojRelative = Util.PathGetRelative(context.ProjectDirectory, pchFile, true);
+                        foundPchInclude = true;
+                        break;
+                    }
+                }
+
+                if (!foundPchInclude)
+                {
+                    foreach (var includePath in pathsToConsider)
+                    {
+                        var pchFile = Util.PathGetAbsolute(includePath, pchFileSourceRelative);
+                        if (Util.FileExists(pchFile))
+                        {
+                            pchFileVcxprojRelative = Util.PathGetRelative(context.ProjectDirectory, pchFile, true);
+                            foundPchInclude = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!foundPchInclude)
+                    throw new Error($"Sharpmake couldn't locate the PCH '{pchFileSourceRelative}' in {conf}");
+
+                context.Options["PrecompiledHeaderThrough"] = pchFileVcxprojRelative;
+            }
+        }
+
+        public virtual void SelectPrecompiledHeaderOptions(IGenerationContext context)
         {
         }
 
@@ -465,18 +506,14 @@ namespace Sharpmake
             includePaths.AddRange(context.Configuration.IncludePrivatePaths);
             includePaths.AddRange(context.Configuration.IncludePaths);
             includePaths.AddRange(context.Configuration.DependenciesIncludePaths);
+            includePaths.AddRange(context.Configuration.IncludeSystemPaths);
+            includePaths.AddRange(context.Configuration.DependenciesIncludeSystemPaths);
 
             includePaths.Sort();
             return includePaths;
         }
 
         protected virtual IEnumerable<IncludeWithPrefix> GetPlatformIncludePathsWithPrefixImpl(IGenerationContext context)
-        {
-            yield break;
-        }
-
-        [Obsolete("Implement GetPlatformIncludePathsWithPrefixImpl instead")]
-        protected virtual IEnumerable<string> GetPlatformIncludePathsImpl(IGenerationContext context)
         {
             yield break;
         }

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,15 +26,6 @@ namespace Sharpmake
                 Debug,
                 Release,
                 Other
-            }
-
-            [Obsolete("Use the DefaultPlatform CSharpProject member")]
-            public enum DefaultPlatform
-            {
-                [Default]
-                AnyCPU,
-                x86,
-                x64
             }
 
             public enum FileAlignment
@@ -184,6 +175,20 @@ namespace Sharpmake
             }
 
             public enum ProduceReferenceAssembly
+            {
+                Enabled,
+                [Default]
+                Disabled
+            }
+
+            public enum UseWpf
+            {
+                Enabled,
+                [Default]
+                Disabled
+            }
+
+            public enum UseWindowsForms
             {
                 Enabled,
                 [Default]
@@ -392,19 +397,25 @@ namespace Sharpmake
                 Disabled
             }
 
+            // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/configure-language-version#c-language-version-reference
             public enum LanguageVersion
             {
                 [Default]
-                LatestMajorVersion,
-                LatestMinorVersion,
-                ISO1,
-                ISO2,
+                LatestMajorVersion, // The compiler accepts syntax from the latest released major version of the compiler.
+                LatestMinorVersion, // The compiler accepts syntax from the latest released version of the compiler (including minor version).
+                Preview, // The compiler accepts all valid language syntax from the latest preview version.
+                ISO1, // The compiler accepts only syntax that is included in ISO/IEC 23270:2003 C# (1.0/1.2).
+                ISO2, // The compiler accepts only syntax that is included in ISO/IEC 23270:2006 C# (2.0).
                 CSharp3,
                 CSharp4,
                 CSharp5,
                 CSharp6,
                 CSharp7,
                 CSharp7_1,
+                CSharp7_2,
+                CSharp7_3,
+                CSharp8,
+                CSharp9,
             }
 
             // Disable warning MSB3270 when disabled
@@ -422,7 +433,8 @@ namespace Sharpmake
                 Level2,
                 Level3,
                 [Default]
-                Level4
+                Level4,
+                Level5
             }
 
             public enum DebugSymbols
@@ -520,7 +532,6 @@ namespace Sharpmake
 
             public enum AutoGenerateBindingRedirects
             {
-                [DevEnvVersion(minimum = DevEnv.vs2013)]
                 Enabled,
                 [Default]
                 Disabled
@@ -533,6 +544,17 @@ namespace Sharpmake
             {
                 [Default]
                 Disabled,
+                Enabled
+            }
+
+            /// <summary>
+            /// Controls whether the project is published when running a publish command
+            /// Only affects processes that use the Publish target, such as the dotnet sdk projects
+            /// </summary>
+            public enum IsPublishable
+            {
+                Disabled,
+                [Default]
                 Enabled
             }
         }

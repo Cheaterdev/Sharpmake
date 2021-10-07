@@ -5,6 +5,7 @@
 # This script supports Python 3.
 
 import os.path
+import platform
 import sys
 
 if os.name != "nt":
@@ -12,10 +13,11 @@ if os.name != "nt":
 
 
 class FunctionalTest(object):
-    def __init__(self, directory, script_name, project_root = ""):
+    def __init__(self, directory, script_name, extra_args = [], project_root = ""):
         self.directory = directory
         self.script_name = script_name
-        self.use_mono = os.name == "posix"
+        self.runs_on_unix = os.name == "posix"
+        self.extra_args = extra_args
         if project_root == "":
             self.project_root = directory
         else:
@@ -28,24 +30,23 @@ class FunctionalTest(object):
             os.chdir(pwd)
 
             # Detects the path of the Sharpmake executable
-            sharpmake_path = find_target_path(self.directory, "Sharpmake.Application.exe")
+            sharpmake_path = find_sharpmake_path()
 
             write_line("Using sharpmake " + sharpmake_path)
 
             # Builds the command line argument list.
-            sources = "/sources(@\"{}\")".format(os.path.join(self.directory, self.script_name))
+            sources = "/sources(@\'{}\')".format(os.path.join(self.directory, self.script_name))
             verbose = "/verbose"
 
             args = [
                 sources,
                 verbose
             ]
+            args.extend(self.extra_args)
 
-            if self.use_mono:
-                args_string = "\" \"".join([arg.replace('"','\\"') for arg in args])
-                cmd_line = "mono --debug {} \"{}\"".format(sharpmake_path, args_string)
-            else:
-                cmd_line = "{} \"{}\"".format(sharpmake_path, " ".join(args))
+            cmd_line = "{} \"{}\"".format(sharpmake_path, " ".join(args))
+            if self.runs_on_unix:
+                cmd_line = "mono --debug " + cmd_line
 
             generation_exit_code = os.system(cmd_line)
 
@@ -95,7 +96,7 @@ class FastBuildFunctionalTest(FunctionalTest):
 
     def verifyCustomBuildEvents(self, projectDir):
         output_dir = os.path.join(projectDir, self.directory, "projects", "output")
-        target_dirs = ["debug_fastbuild_noblob_vs2017", "debug_fastbuild_vs2017", "release_fastbuild_noblob_vs2017", "release_fastbuild_vs2017"]
+        target_dirs = ["debug_fastbuild_noblob_vs2019", "debug_fastbuild_vs2019", "release_fastbuild_noblob_vs2019", "release_fastbuild_vs2019"]
 
         for target_dir in target_dirs:
             target_dir = os.path.join(output_dir, target_dir)
@@ -121,16 +122,26 @@ class NoAllFastBuildProjectFunctionalTest(FunctionalTest):
     def build(self, projectDir):
         return build_with_fastbuild(projectDir, self.directory)
 
+class SharpmakePackageFunctionalTest(FunctionalTest):
+    def __init__(self):
+        super(SharpmakePackageFunctionalTest, self).__init__("SharpmakePackageFunctionalTest", "SharpmakePackageFunctionalTest.sharpmake.cs", ["/generateDebugSolution"])
+
+    def build(self, projectDir):
+        return 0
+
 
 funcTests = [
     FastBuildFunctionalTest(),
-    NoAllFastBuildProjectFunctionalTest()
+    NoAllFastBuildProjectFunctionalTest(),
+    SharpmakePackageFunctionalTest()
 ]
 
 
 def build_with_fastbuild(root_dir, test_dir):
     entry_path = os.getcwd()
-    fastBuildPath = os.path.join(entry_path, "tools", "FastBuild", "FBuild.exe");
+    platformSystem = platform.system()
+    fastBuildInfo = ("Linux-x64", "fbuild") if platformSystem == "Linux" else ("OSX-x64", "FBuild") if platformSystem == "Darwin" else ("Windows-x64", "FBuild.exe")
+    fastBuildPath = os.path.join(entry_path, "tools", "FastBuild", fastBuildInfo[0], fastBuildInfo[1]);
     if not os.path.isfile(fastBuildPath):
         return -1
 
@@ -142,10 +153,10 @@ def build_with_fastbuild(root_dir, test_dir):
     write_line("Working dir: " + working_dir)
     return os.system(cmd_line)
 
-def find_target_path(directory, target):
+def find_sharpmake_path():
     optim_tokens = ["debug", "release"]
     for optim_token in optim_tokens:
-        path = os.path.abspath(os.path.join("..", "tmp", "bin", optim_token, "sharpmake.application", target))
+        path = os.path.abspath(os.path.join("..", "tmp", "bin", optim_token, "Sharpmake.Application.exe"))
         if os.path.isfile(path):
             return path
 

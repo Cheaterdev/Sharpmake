@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,22 +20,17 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Build.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
-using EmbeddedText = Microsoft.CodeAnalysis.EmbeddedText;
 
 namespace Sharpmake
 {
     public class Assembler
     {
-        /// <summary>
-        /// Extra user directory to load assembly from using statement detection
-        /// </summary>
-        [Obsolete("AssemblyDirectory is not used anymore")]
-        public List<string> AssemblyDirectory { get { return _assemblyDirectory; } }
+        public const Options.CSharp.LanguageVersion SharpmakeScriptsCSharpVersion = Options.CSharp.LanguageVersion.CSharp7;
+        public const DotNetFramework SharpmakeDotNetFramework = DotNetFramework.v4_7_2;
 
         /// <summary>
         /// Extra user assembly to use while compiling
@@ -117,13 +112,11 @@ namespace Sharpmake
             ParameterInfo[] delegateParameterInfos = delegateMethodInfo.GetParameters();
             ParameterInfo delegateReturnInfos = delegateMethodInfo.ReturnParameter;
 
-            Assembly assembly;
-
             Assembler assembler = new Assembler();
             assembler.UseDefaultReferences = false;
             assembler.Assemblies.AddRange(assemblies);
 
-            assembly = assembler.BuildAssembly(fileInfo.FullName);
+            Assembly assembly = assembler.BuildAssembly(fileInfo.FullName);
 
             List<MethodInfo> matchMethods = new List<MethodInfo>();
 
@@ -200,7 +193,7 @@ namespace Sharpmake
             // the temp files and deleting them.
             // eg. "C:\\fastbuild-work\\85f7d472c25d494ca09f2ea7fe282d50"
             //string sourceTmpFile = Path.GetTempFileName();
-            string sourceTmpFile = Path.Combine(Path.GetTempPath(), (Guid.NewGuid().ToString("N") + ".tmp"));
+            string sourceTmpFile = Path.Combine(Path.GetTempPath(), (Guid.NewGuid().ToString("N") + ".tmp.sharpmake.cs"));
 
             Type delegateType = typeof(TDelegate);
 
@@ -228,7 +221,7 @@ namespace Sharpmake
                 for (int i = 0; i < parameters.Length; i++)
                 {
                     string parametersName = parameters[i].Name;
-                    string parametersType = (parameters[i].ParameterType == typeof(Object)) ? "Object" : parameters[i].ParameterType.FullName;
+                    string parametersType = (parameters[i].ParameterType == typeof(object)) ? "Object" : parameters[i].ParameterType.FullName;
 
                     writer.Write("{0}{1} {2}", i == 0 ? "" : ", ", parametersType, parametersName);
                 }
@@ -422,26 +415,24 @@ namespace Sharpmake
         private SourceText ReadSourceCode(string path)
         {
             using (var stream = File.OpenRead(path))
-                return SourceText.From(stream, Encoding.Default, canBeEmbedded: true);
+                return SourceText.From(stream, Encoding.Default);
         }
 
         private Assembly Compile(IBuilderContext builderContext, string[] files, string libraryFile, HashSet<string> references)
         {
             // Parse all files
             var syntaxTrees = new ConcurrentBag<SyntaxTree>();
-            var embeddedTexts = new ConcurrentBag<EmbeddedText>();
-            var parseOptions = new CSharpParseOptions(LanguageVersion.CSharp7, DocumentationMode.None, preprocessorSymbols: _defines);
+            var parseOptions = new CSharpParseOptions(ConvertSharpmakeOptionToLanguageVersion(SharpmakeScriptsCSharpVersion), DocumentationMode.None, preprocessorSymbols: _defines);
             Parallel.ForEach(files, f =>
             {
                 var sourceText = ReadSourceCode(f);
                 syntaxTrees.Add(CSharpSyntaxTree.ParseText(sourceText, parseOptions, path: f));
-                embeddedTexts.Add(EmbeddedText.FromSource(f, sourceText));
             });
 
-            return Compile(builderContext, syntaxTrees, embeddedTexts, libraryFile, references);
+            return Compile(builderContext, syntaxTrees, libraryFile, references);
         }
 
-        private Assembly Compile(IBuilderContext builderContext, IEnumerable<SyntaxTree> syntaxTrees, IEnumerable<EmbeddedText> embeddedTexts, string libraryFile, HashSet<string> references)
+        private Assembly Compile(IBuilderContext builderContext, IEnumerable<SyntaxTree> syntaxTrees, string libraryFile, HashSet<string> references)
         {
             // Add references
             var portableExecutableReferences = new List<PortableExecutableReference>();
@@ -454,7 +445,7 @@ namespace Sharpmake
             // Compile
             var compilationOptions = new CSharpCompilationOptions(
                 OutputKind.DynamicallyLinkedLibrary,
-                optimizationLevel: OptimizationLevel.Release,
+                optimizationLevel: (builderContext == null || builderContext.DebugScripts) ? OptimizationLevel.Debug : OptimizationLevel.Release,
                 warningLevel: 4
             );
             var assemblyName = libraryFile != null ? Path.GetFileNameWithoutExtension(libraryFile) : $"Sharpmake_{new Random().Next():X8}" + GetHashCode();
@@ -467,12 +458,14 @@ namespace Sharpmake
                 EmitResult result = compilation.Emit(
                     dllStream,
                     pdbStream,
-                    embeddedTexts: embeddedTexts,
                     options: new EmitOptions(
-                        debugInformationFormat: Util.IsRunningInMono() ? DebugInformationFormat.PortablePdb : DebugInformationFormat.Pdb,
+                        debugInformationFormat: DebugInformationFormat.PortablePdb,
                         pdbFilePath: pdbFilePath
                     )
                 );
+
+                bool throwErrorException = builderContext == null || builderContext.CompileErrorBehavior == BuilderCompileErrorBehavior.ThrowException;
+                LogCompilationResult(result, throwErrorException);
 
                 if (result.Success)
                 {
@@ -491,9 +484,6 @@ namespace Sharpmake
 
                     return Assembly.Load(dllStream.GetBuffer(), pdbStream.GetBuffer());
                 }
-
-                bool throwErrorException = builderContext == null || builderContext.CompileErrorBehavior == BuilderCompileErrorBehavior.ThrowException;
-                LogCompilationResult(result, throwErrorException);
             }
 
             return null;
@@ -513,7 +503,7 @@ namespace Sharpmake
                 errorMessage += diagnostic + Environment.NewLine;
             }
 
-            if (throwErrorException)
+            if (!result.Success && throwErrorException)
                 throw new Error(errorMessage);
         }
 
@@ -679,11 +669,45 @@ namespace Sharpmake
 
         public static IEnumerable<string> EnumeratePathToDotNetFramework()
         {
-            for (int i = (int)TargetDotNetFrameworkVersion.VersionLatest; i >= 0; --i)
+            yield return Path.GetDirectoryName(typeof(object).Assembly.Location);
+        }
+
+        private static LanguageVersion ConvertSharpmakeOptionToLanguageVersion(Options.CSharp.LanguageVersion languageVersion)
+        {
+            switch (languageVersion)
             {
-                string frameworkDirectory = ToolLocationHelper.GetPathToDotNetFramework((TargetDotNetFrameworkVersion)i);
-                if (frameworkDirectory != null)
-                    yield return frameworkDirectory;
+                case Options.CSharp.LanguageVersion.LatestMajorVersion:
+                    return LanguageVersion.LatestMajor;
+                case Options.CSharp.LanguageVersion.LatestMinorVersion:
+                    return LanguageVersion.Latest;
+                case Options.CSharp.LanguageVersion.Preview:
+                    return LanguageVersion.Preview;
+                case Options.CSharp.LanguageVersion.ISO1:
+                    return LanguageVersion.CSharp1;
+                case Options.CSharp.LanguageVersion.ISO2:
+                    return LanguageVersion.CSharp2;
+                case Options.CSharp.LanguageVersion.CSharp3:
+                    return LanguageVersion.CSharp3;
+                case Options.CSharp.LanguageVersion.CSharp4:
+                    return LanguageVersion.CSharp4;
+                case Options.CSharp.LanguageVersion.CSharp5:
+                    return LanguageVersion.CSharp5;
+                case Options.CSharp.LanguageVersion.CSharp6:
+                    return LanguageVersion.CSharp6;
+                case Options.CSharp.LanguageVersion.CSharp7:
+                    return LanguageVersion.CSharp7;
+                case Options.CSharp.LanguageVersion.CSharp7_1:
+                    return LanguageVersion.CSharp7_1;
+                case Options.CSharp.LanguageVersion.CSharp7_2:
+                    return LanguageVersion.CSharp7_2;
+                case Options.CSharp.LanguageVersion.CSharp7_3:
+                    return LanguageVersion.CSharp7_3;
+                case Options.CSharp.LanguageVersion.CSharp8:
+                    return LanguageVersion.CSharp8;
+                case Options.CSharp.LanguageVersion.CSharp9:
+                    return LanguageVersion.CSharp9;
+                default:
+                    throw new NotImplementedException($"Don't know how to convert sharpmake option {languageVersion} to language version");
             }
         }
 

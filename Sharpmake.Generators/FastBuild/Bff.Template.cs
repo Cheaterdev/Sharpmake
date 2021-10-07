@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,8 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-using System;
 
 namespace Sharpmake.Generators.FastBuild
 {
@@ -66,6 +64,7 @@ Settings
     [CachePath]
     [WorkerConnectionLimit]
     .AllowDBMigration_Experimental = [fastBuildAllowDBMigration]
+[AdditionalGlobalSettings]
 }
 ";
 
@@ -107,7 +106,24 @@ Compiler( '[fastbuildCompilerName]' )
     .Executable             = '[fastBuildCompilerExecutable]'
     .ExtraFiles             = [fastBuildExtraFiles]
     .CompilerFamily         = '[fastBuildCompilerFamily]'
-    [fastBuildVS2012EnumBugWorkaround]
+    .UseRelativePaths_Experimental = [fastBuildCompilerUseRelativePaths]
+[fastBuildCompilerAdditionalSettings]
+}
+";
+
+                internal static string ResourceCompilerSettings = @"
+Compiler( '[fastBuildResourceCompilerName]' )
+{
+    .Executable             = '[fastBuildResourceCompiler]'
+    .CompilerFamily         = 'custom'
+}
+";
+
+                internal static string MasmCompilerSettings = @"
+Compiler( '[fastBuildMasmCompilerName]' )
+{
+    .Executable             = '[fastBuildMasmCompiler]'
+    .CompilerFamily         = 'custom'
 }
 ";
 
@@ -117,7 +133,7 @@ Compiler( '[fastbuildCompilerName]' )
     Using( [fastBuildUsing] )
     .BinPath                = '[fastBuildBinPath]'
     .LinkerPath             = '[fastBuildLinkerPath]'
-    .ResourceCompiler       = '[fastBuildResourceCompiler]'
+    .ResourceCompiler       = '[fastBuildResourceCompilerName]'
     .Compiler               = '[fastBuildCompilerName]'
     .Librarian              = '[fastBuildLibrarian]'
     .Linker                 = '[fastBuildLinker]'
@@ -190,6 +206,7 @@ Compiler( '[fastbuildCompilerName]' )
                             + ' [cmdLineOptions.FixedBaseAddress]'
                             + ' [cmdLineOptions.ImportLibrary]'
                             + ' [cmdLineOptions.TargetMachine]'
+                            + ' [cmdLineOptions.LinkerCreateHotPatchableImage]'
                             + ' /errorReport:queue'
                             + ' [cmdLineOptions.ModuleDefinitionFile]'
                             // Additional linker options
@@ -205,6 +222,7 @@ Compiler( '[fastbuildCompilerName]' )
     .PCHOptions             = '""%1"" /Fp""%2"" /Fo""%3"" /c'
                             + ' /Yc""[cmdLineOptions.PrecompiledHeaderThrough]""'
                             + ' [fastBuildPCHForceInclude]'
+                            + ' [options.AdditionalCompilerOptionsOnPCHCreate]'
                             + ' $CompilerExtraOptions$'
                             + ' $CompilerOptimizations$'
 
@@ -215,6 +233,7 @@ Compiler( '[fastbuildCompilerName]' )
     .PCHInputFile           = '[fastBuildPrecompiledSourceFile]'
     .PCHOutputFile          = '[cmdLineOptions.PrecompiledHeaderFile]'
     .PCHOptions             = '-o ""%2"" -c -x c++-header ""%1""'
+                            + ' [options.AdditionalCompilerOptionsOnPCHCreate]'
                             + ' $CompilerExtraOptions$'
                             + ' $CompilerOptimizations$'
 
@@ -223,8 +242,11 @@ Compiler( '[fastbuildCompilerName]' )
     .PCHOptionsDeoptimized = .PCHOptions
 ";
 
-                public static string UsePrecompClang = @"-include-pch $PCHOutputFile$";
+                public static string UsePrecompClang = @"-include-pch $PCHOutputFile$'
+                            + ' [options.AdditionalCompilerOptionsOnPCHUse]'
+                            + '";
                 public static string UsePrecomp = @"/Yu""[cmdLineOptions.PrecompiledHeaderThrough]"" /Fp""$PCHOutputFile$""'
+                            + ' [options.AdditionalCompilerOptionsOnPCHUse]'
                             + ' [fastBuildPCHForceInclude]";
 
                 public static string ResourceCompilerOptions = @"
@@ -310,20 +332,14 @@ Compiler( '[fastbuildCompilerName]' )
 
                 public static string MasmCompilerExtraOptions = @"
     .CompilerExtraOptions   = ''
-            // General options
-            // ---------------------------
             + ' /nologo'
             + ' /W3'
             + ' /errorReport:queue'
-            // Preprocessor options
-            // ---------------------------
             + ' [cmdLineOptions.PreprocessorDefinitions]'
 ";
 
                 public static string CPPCompilerExtraOptions = @"
     .CompilerExtraOptions   = ''
-            // General options
-            // ---------------------------
             + ' [cmdLineOptions.AdditionalIncludeDirectories]'
             + ' [cmdLineOptions.AdditionalUsingDirectories]'
             + ' [cmdLineOptions.DebugInformationFormat]'
@@ -332,21 +348,17 @@ Compiler( '[fastbuildCompilerName]' )
             + ' [cmdLineOptions.SuppressStartupBanner]'
             + ' [cmdLineOptions.WarningLevel]'
             + ' [cmdLineOptions.TreatWarningAsError]'
+            + ' [cmdLineOptions.ExternalWarningLevel]'
             + ' [cmdLineOptions.DiagnosticsFormat]'
+            + ' [cmdLineOptions.EnableASAN]'
             + ' [fastBuildCompileAsC]'
-            // Multi-threaded build is already handled by FASTBuild
-            // + ' [cmdLineOptions.MultiProcessorCompilation]'
             + ' [cmdLineOptions.ConfigurationType]'
-            // Preprocessor options
-            // ---------------------------
             + ' [cmdLineOptions.PreprocessorDefinitions]'
             + ' [cmdLineOptions.UndefinePreprocessorDefinitions]'
             + ' [cmdLineOptions.UndefineAllPreprocessorDefinitions]'
             + ' [cmdLineOptions.IgnoreStandardIncludePath]'
             + ' [cmdLineOptions.GeneratePreprocessedFile]'
             + ' [cmdLineOptions.KeepComments]'
-            // Code Generation options
-            // ---------------------------
             + ' [cmdLineOptions.StringPooling]'
             + ' [cmdLineOptions.MinimalRebuild]'
             + ' [cmdLineOptions.ExceptionHandling]'
@@ -359,42 +371,34 @@ Compiler( '[fastbuildCompilerName]' )
             + ' [cmdLineOptions.EnableEnhancedInstructionSet]'
             + ' [cmdLineOptions.FloatingPointModel]'
             + ' [cmdLineOptions.FloatingPointExceptions]'
-            + ' [cmdLineOptions.CreateHotpatchableImage]'
+            + ' [cmdLineOptions.CompilerCreateHotpatchableImage]'
             + ' [cmdLineOptions.SupportJustMyCode]'
             + ' [cmdLineOptions.SpectreMitigation]'
-            // Language options
-            // ---------------------------
             + ' [cmdLineOptions.DisableLanguageExtensions]'
             + ' [cmdLineOptions.TreatWChar_tAsBuiltInType]'
             + ' [cmdLineOptions.ForceConformanceInForLoopScope]'
             + ' [cmdLineOptions.RemoveUnreferencedCodeData]'
             + ' [cmdLineOptions.RuntimeTypeInfo]'
             + ' [cmdLineOptions.OpenMP]'
+            + ' [cmdLineOptions.LanguageStandard_C]'
             + ' [cmdLineOptions.LanguageStandard]'
             + ' [cmdLineOptions.ConformanceMode]'
-            // Output Files options
-            // ---------------------------
             + ' [cmdLineOptions.CompilerProgramDatabaseFile]'
-            // Advanced options
-            // ---------------------------
             + ' [cmdLineOptions.CallingConvention]'
             + ' [cmdLineOptions.DisableSpecificWarnings]'
             + ' [cmdLineOptions.ForcedIncludeFiles]'
             + ' [fastBuildSourceFileType]'
             + ' [fastBuildAdditionalCompilerOptionsFromCode]'
             + ' /errorReport:queue'
-            // Character Set
-            // ---------------------------
+            + ' [cmdLineOptions.TranslateIncludes]'
+            + ' [cmdLineOptions.TreatAngleIncludeAsExternal]'
+            + ' [cmdLineOptions.ExternalTemplatesDiagnostics]'
             + ' [cmdLineOptions.CharacterSet]'
-            // Additional compiler options
-            //--------------------------
             + ' [options.AdditionalCompilerOptions]'
             + ' [fastBuildCompilerForceUsing]'
 ";
                 public static string CPPCompilerOptimizationOptions =
 @"
-    // Optimizations options
-    // ---------------------
     .CompilerOptimizations = ''
             + ' [cmdLineOptions.Optimization]'
             + ' [cmdLineOptions.InlineFunctionExpansion]'
@@ -445,7 +449,6 @@ Library( '[fastBuildOutputFileShortName]_[fastBuildOutputType]' )
 {
     [fastBuildUsingPlatformConfig]
     .Intermediate           = '[cmdLineOptions.IntermediateDirectory]\'
-
 ";
 
                 public static string EndSection = "}\n\n";
@@ -458,6 +461,16 @@ Alias( '[fastBuildOutputFileShortName]' )
 }
 
 ";
+
+                public static string TargetForLibraryDependencySection = @"
+//=================================================================================================================
+Alias( '[fastBuildOutputFileShortName]_LibraryDependency' )
+{
+    .Targets = [fastBuildTargetLibraryDependencies]
+}
+
+";
+
                 public static string CopyFileSection = @"
 //=================================================================================================================
 Copy( '[fastBuildCopyAlias]' )
@@ -473,7 +486,7 @@ Copy( '[fastBuildCopyAlias]' )
 //=================================================================================================================
 [fastBuildOutputType]( '[fastBuildOutputFileShortName]_[fastBuildOutputType]' )
 {
-     [fastBuildUsingPlatformConfig]
+    [fastBuildUsingPlatformConfig]
     .Intermediate           = '[cmdLineOptions.IntermediateDirectory]\'
     .Libraries              = [fastBuildProjectDependencies]
     .PreBuildDependencies   = [fastBuildBuildOnlyDependencies]
@@ -488,7 +501,7 @@ Copy( '[fastBuildCopyAlias]' )
 //=================================================================================================================
 ObjectList( '[fastBuildOutputFileShortName]_resources' )
 {
-     [fastBuildUsingPlatformConfig]
+    [fastBuildUsingPlatformConfig]
     .Intermediate           = '[cmdLineOptions.IntermediateDirectory]\'
 ";
 
@@ -496,7 +509,7 @@ ObjectList( '[fastBuildOutputFileShortName]_resources' )
 //=================================================================================================================
 ObjectList( '[fastBuildOutputFileShortName]_embedded' )
 {
-     [fastBuildUsingPlatformConfig]
+    [fastBuildUsingPlatformConfig]
     .Intermediate           = '[cmdLineOptions.IntermediateDirectory]\'
 ";
 
@@ -504,7 +517,7 @@ ObjectList( '[fastBuildOutputFileShortName]_embedded' )
 //=================================================================================================================
 ObjectList( '[fastBuildOutputFileShortName]_objects' )
 {
-     [fastBuildUsingPlatformConfig]
+    [fastBuildUsingPlatformConfig]
     .Intermediate           = '[cmdLineOptions.IntermediateDirectory]\'
 ";
 
@@ -524,8 +537,6 @@ Exec( '[fastBuildPreBuildName]' )
 }
 
 ";
-                [Obsolete("Section has been renamed to: GenericExecutableSection")]
-                public static string GenericExcutableSection = GenericExecutableSection;
 
                 public static string TestSection = @"
 //=================================================================================================================
@@ -537,7 +548,7 @@ Test( '[fastBuildTest]' )
   .TestWorkingDir        = '[fastBuildTestWorkingDir]'
   .TestTimeOut           =  [fastBuildTestTimeOut]
   .TestAlwaysShowOutput  =  [fastBuildTestAlwaysShowOutput]
-  .PreBuildDependencies  = [fastBuildTestPreBuildDependencies]
+  .TestInput             = [fastBuildTestPreBuildDependencies]
 }
 
 ";
@@ -564,6 +575,7 @@ Unity( '[unityFile.UnityName]' )
     .UnityOutputPattern                 = '[unityFile.UnityOutputPattern]'
     .UnityNumFiles                      =  [unityFile.UnityNumFiles]
     .UnityPCH                           = '[unityFile.UnityPCH]'
+    .UseRelativePaths_Experimental      = [unityFile.UseRelativePaths]
 }
 ";
 

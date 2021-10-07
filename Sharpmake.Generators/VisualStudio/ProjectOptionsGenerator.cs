@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,7 +40,6 @@ namespace Sharpmake.Generators.VisualStudio
             public string OutputDirectoryRelative { get; set; }
             public string OutputLibraryDirectoryRelative { get; set; }
             public string IntermediateDirectoryRelative { get; set; }
-            public string TargetName { get; set; }
             public bool HasClrSupport { get; set; }
             public EnvironmentVariableResolver Resolver { get; }
             public string PlatformLibraryExtension { get; }
@@ -156,7 +155,6 @@ namespace Sharpmake.Generators.VisualStudio
             context.Options["IntermediateDirectory"] = context.Configuration.Output != Project.Configuration.OutputType.None ? optionsContext.IntermediateDirectoryRelative : FileGeneratorUtilities.RemoveLineTag;
             context.CommandLineOptions["IntermediateDirectory"] = FormatCommandLineOptionPath(context, optionsContext.IntermediateDirectoryRelative);
 
-            optionsContext.TargetName = context.Configuration.TargetFileFullName;
             if (!string.IsNullOrEmpty(context.Configuration.LayoutDir))
                 context.Options["LayoutDir"] = Util.PathGetRelative(context.ProjectDirectory, context.Configuration.LayoutDir);
             else
@@ -180,9 +178,9 @@ namespace Sharpmake.Generators.VisualStudio
 
             if (context.Configuration.Target.GetPlatform() == Platform.linux)
             {
-                context.Options["ProjectDirectory"] = "/mnt/" + context.ProjectDirectoryCapitalized.Replace(@":", string.Empty).Replace('\\', '/');
-                context.Options["OutputDirectoryRemote"] = (@"$(RemoteProjectDir)" + context.Options["OutputDirectory"]).Replace('\\', '/');
-                context.Options["IntermediateDirectoryRemote"] = (@"$(RemoteProjectDir)" + context.Options["IntermediateDirectory"]).Replace('\\', '/');
+                context.Options["ProjectDirectory"] = Util.ConvertToMountedUnixPath(context.ProjectDirectoryCapitalized);
+                context.Options["OutputDirectoryRemote"] = (@"$(RemoteProjectDir)" + Util.ConvertToUnixSeparators(Util.EnsureTrailingSeparator(context.Options["OutputDirectory"])));
+                context.Options["IntermediateDirectoryRemote"] = (@"$(RemoteProjectDir)" + Util.ConvertToUnixSeparators(Util.EnsureTrailingSeparator(context.Options["IntermediateDirectory"])));
             }
         }
 
@@ -299,32 +297,32 @@ namespace Sharpmake.Generators.VisualStudio
                 //https://clang.llvm.org/docs/CommandGuide/clang.html
                 context.SelectOption
                 (
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Default, () => { context.Options["ClangCppLanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp98, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++98"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp11, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++11"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp14, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++14"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp17, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++17"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp2a, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++2a"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp98, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++98"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp11, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++11"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp14, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++14"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp17, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++17"; }),
-                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp2a, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++2a"; })
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Default, () => { context.Options["ClangCppLanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; context.Options["CppLanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp98, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++98"; context.Options["CppLanguageStandard"] = "c++98"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp11, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++11"; context.Options["CppLanguageStandard"] = "c++11"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp14, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++14"; context.Options["CppLanguageStandard"] = "c++14"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp17, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++17"; context.Options["CppLanguageStandard"] = "c++17"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.Cpp2a, () => { context.Options["ClangCppLanguageStandard"] = "-std=c++2a"; context.Options["CppLanguageStandard"] = "c++2a"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp98, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++98"; context.Options["CppLanguageStandard"] = "gnu++98"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp11, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++11"; context.Options["CppLanguageStandard"] = "gnu++11"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp14, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++14"; context.Options["CppLanguageStandard"] = "gnu++14"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp17, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++17"; context.Options["CppLanguageStandard"] = "gnu++17"; }),
+                Options.Option(Options.Clang.Compiler.CppLanguageStandard.GnuCpp2a, () => { context.Options["ClangCppLanguageStandard"] = "-std=gnu++2a"; context.Options["CppLanguageStandard"] = "gnu++2a"; })
                 );
 
                 context.SelectOption
                 (
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.Default, () => { context.Options["ClangCLanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.C89, () => { context.Options["ClangCLanguageStandard"] = "-std=c89"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.C90, () => { context.Options["ClangCLanguageStandard"] = "-std=c90"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.C99, () => { context.Options["ClangCLanguageStandard"] = "-std=c99"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.C11, () => { context.Options["ClangCLanguageStandard"] = "-std=c11"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.C17, () => { context.Options["ClangCLanguageStandard"] = "-std=c17"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC89, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu89"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC90, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu90"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC99, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu99"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC11, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu11"; }),
-                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC17, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu17"; })
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.Default, () => { context.Options["ClangCLanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; context.Options["CLanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.C89, () => { context.Options["ClangCLanguageStandard"] = "-std=c89"; context.Options["CLanguageStandard"] = "c89"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.C90, () => { context.Options["ClangCLanguageStandard"] = "-std=c90"; context.Options["CLanguageStandard"] = "c90"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.C99, () => { context.Options["ClangCLanguageStandard"] = "-std=c99"; context.Options["CLanguageStandard"] = "c99"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.C11, () => { context.Options["ClangCLanguageStandard"] = "-std=c11"; context.Options["CLanguageStandard"] = "c11"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.C17, () => { context.Options["ClangCLanguageStandard"] = "-std=c17"; context.Options["CLanguageStandard"] = "c17"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC89, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu89"; context.Options["CLanguageStandard"] = "gnu89"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC90, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu90"; context.Options["CLanguageStandard"] = "gnu90"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC99, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu99"; context.Options["CLanguageStandard"] = "gnu99"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC11, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu11"; context.Options["CLanguageStandard"] = "gnu11"; }),
+                Options.Option(Options.Clang.Compiler.CLanguageStandard.GnuC17, () => { context.Options["ClangCLanguageStandard"] = "-std=gnu17"; context.Options["CLanguageStandard"] = "gnu17"; })
                 );
 
                 context.CommandLineOptions["CppLanguageStd"] = context.Options["ClangCppLanguageStandard"];
@@ -362,15 +360,33 @@ namespace Sharpmake.Generators.VisualStudio
                 Options.Option(Options.Vc.Compiler.CppLanguageStandard.CPP11, () => { context.Options["LanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["LanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; }),
                 Options.Option(Options.Vc.Compiler.CppLanguageStandard.CPP14, () => { context.Options["LanguageStandard"] = "stdcpp14"; context.CommandLineOptions["LanguageStandard"] = "/std:c++14"; }),
                 Options.Option(Options.Vc.Compiler.CppLanguageStandard.CPP17, () => { context.Options["LanguageStandard"] = "stdcpp17"; context.CommandLineOptions["LanguageStandard"] = "/std:c++17"; }),
+                Options.Option(Options.Vc.Compiler.CppLanguageStandard.CPP20, () => { context.Options["LanguageStandard"] = "stdcpp20"; context.CommandLineOptions["LanguageStandard"] = "/std:c++20"; }),
                 Options.Option(Options.Vc.Compiler.CppLanguageStandard.GNU98, () => { context.Options["LanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["LanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; }),
                 Options.Option(Options.Vc.Compiler.CppLanguageStandard.GNU11, () => { context.Options["LanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["LanguageStandard"] = FileGeneratorUtilities.RemoveLineTag; }),
                 Options.Option(Options.Vc.Compiler.CppLanguageStandard.GNU14, () => { context.Options["LanguageStandard"] = "stdcpp14"; context.CommandLineOptions["LanguageStandard"] = "/std:c++14"; }),
                 Options.Option(Options.Vc.Compiler.CppLanguageStandard.GNU17, () => { context.Options["LanguageStandard"] = "stdcpp17"; context.CommandLineOptions["LanguageStandard"] = "/std:c++17"; }),
                 Options.Option(Options.Vc.Compiler.CppLanguageStandard.Latest, () => { context.Options["LanguageStandard"] = "stdcpplatest"; context.CommandLineOptions["LanguageStandard"] = "/std:c++latest"; })
                 );
+
+                //Options.Vc.Compiler.CLanguageStandard.
+                //    Legacy                                  LanguageStandard_C=""
+                //    C11                                     LanguageStandard_C="stdc11"                                    /std:c11
+                //    C17                                     LanguageStandard_C="stdc17"                                    /std:c17
+                context.SelectOption
+                (
+                Options.Option(Options.Vc.Compiler.CLanguageStandard.Legacy, () => { context.Options["LanguageStandard_C"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["LanguageStandard_C"] = FileGeneratorUtilities.RemoveLineTag; }),
+                Options.Option(Options.Vc.Compiler.CLanguageStandard.C11, () => { context.Options["LanguageStandard_C"] = "stdc11"; context.CommandLineOptions["LanguageStandard_C"] = "/std:c11"; }),
+                Options.Option(Options.Vc.Compiler.CLanguageStandard.C17, () => { context.Options["LanguageStandard_C"] = "stdc17"; context.CommandLineOptions["LanguageStandard_C"] = "/std:c17"; })
+                );
             }
 
             // Compiler section
+
+            context.SelectOption
+            (
+            Options.Option(Options.Vc.General.TranslateIncludes.Enable, () => { context.Options["TranslateIncludes"] = "true"; context.CommandLineOptions["TranslateIncludes"] = "/translateInclude"; }),
+            Options.Option(Options.Vc.General.TranslateIncludes.Disable, () => { context.Options["TranslateIncludes"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["TranslateIncludes"] = FileGeneratorUtilities.RemoveLineTag; })
+            );
 
             //Options.Vc.General.CommonLanguageRuntimeSupport.
             context.SelectOption
@@ -378,8 +394,7 @@ namespace Sharpmake.Generators.VisualStudio
             Options.Option(Options.Vc.General.CommonLanguageRuntimeSupport.NoClrSupport, () => { context.Options["CLRSupport"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["CLRSupport"] = FileGeneratorUtilities.RemoveLineTag; }),
             Options.Option(Options.Vc.General.CommonLanguageRuntimeSupport.ClrSupport, () => { context.Options["CLRSupport"] = "true"; context.CommandLineOptions["CLRSupport"] = "/clr"; }),
             Options.Option(Options.Vc.General.CommonLanguageRuntimeSupport.PureMsilClrSupport, () => { context.Options["CLRSupport"] = "Pure"; context.CommandLineOptions["CLRSupport"] = "/clr:pure"; }),
-            Options.Option(Options.Vc.General.CommonLanguageRuntimeSupport.SafeMsilClrSupport, () => { context.Options["CLRSupport"] = "Safe"; context.CommandLineOptions["CLRSupport"] = "/clr:safe"; }),
-            Options.Option(Options.Vc.General.CommonLanguageRuntimeSupport.SafeMsilClrSupportOldSyntax, () => { context.Options["CLRSupport"] = "OldSyntax"; context.CommandLineOptions["CLRSupport"] = "/clr:oldSyntax"; })
+            Options.Option(Options.Vc.General.CommonLanguageRuntimeSupport.SafeMsilClrSupport, () => { context.Options["CLRSupport"] = "Safe"; context.CommandLineOptions["CLRSupport"] = "/clr:safe"; })
             );
 
             context.SelectOption
@@ -407,12 +422,46 @@ namespace Sharpmake.Generators.VisualStudio
             optionsContext.PlatformVcxproj.SelectApplicationFormatOptions(context);
             optionsContext.PlatformVcxproj.SelectBuildType(context);
 
-            context.Options["ExecutablePath"] = FileGeneratorUtilities.RemoveLineTag;
-            context.Options["IncludePath"] = FileGeneratorUtilities.RemoveLineTag;
-            context.Options["LibraryPath"] = FileGeneratorUtilities.RemoveLineTag;
-            context.Options["ExcludePath"] = FileGeneratorUtilities.RemoveLineTag;
-            context.Options["AdditionalUsingDirectories"] = FileGeneratorUtilities.RemoveLineTag;
+            // Visual C++ Directories
+            {
+                // Path to use when searching for executable files while building a VC++ project.  Corresponds to environment variable PATH.
+                context.Options["ExecutablePath"] = FileGeneratorUtilities.RemoveLineTag;
 
+                // Path to use when searching for include files while building a VC++ project.  Corresponds to environment variable INCLUDE.
+                context.Options["IncludePath"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // Vs2019+: Path to treat as external/system during compilation and skip in build up-to-date check.
+                context.Options["ExternalIncludePath"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // Path to use when searching for metadata files while building a VC++ project. Corresponds to environment variable LIBPATH.
+                context.Options["ReferencePath"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // Path to use when searching for library files while building a VC++ project.  Corresponds to environment variable LIB.
+                context.Options["LibraryPath"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // Path to use when searching for winmd metadata files while building a VC++ project. Gets concatenated with 'Reference Directories' into LIBPATH.
+                context.Options["LibraryWPath"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // Path to use when searching for source files to use for Intellisense.
+                context.Options["SourcePath"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // Path to skip when searching for scan dependencies.
+                context.Options["ExcludePath"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // One or more directories to automatically add to the include path in the referencing projects.
+                context.Options["PublicIncludeDirectories"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // Specifies if directories or all project header files should be automatically added to the include path in the referencing projects.
+                context.Options["AllProjectIncludesArePublic"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // One or more this project directories containing c++ module and/or header unit sources to make automatically available in the referencing projects.
+                context.Options["PublicModuleDirectories"] = FileGeneratorUtilities.RemoveLineTag;
+
+                // Specifies if all project modules and header units should be automatically available in the referencing projects.
+                context.Options["AllProjectBMIsArePublic"] = FileGeneratorUtilities.RemoveLineTag;
+            }
+
+            context.Options["AdditionalUsingDirectories"] = FileGeneratorUtilities.RemoveLineTag;
             optionsContext.PlatformVcxproj.SetupSdkOptions(context);
 
             bool writeResourceCompileTag = optionsContext.PlatformVcxproj.GetResourceIncludePaths(context).Any();
@@ -448,9 +497,6 @@ namespace Sharpmake.Generators.VisualStudio
 
             SelectDebugInformationOption(context, optionsContext);
 
-            //Options.Vc.General.UseDebugLibraries.
-            //    Disable                                 WarnAsError="false"
-            //    Enable                                  WarnAsError="true"                              /WX
             context.SelectOption
             (
             Options.Option(Options.Vc.General.UseDebugLibraries.Disabled, () => { context.Options["UseDebugLibraries"] = "false"; }),
@@ -489,6 +535,27 @@ namespace Sharpmake.Generators.VisualStudio
             Options.Option(Options.Vc.General.DiagnosticsFormat.ColumnInfo, () => { context.Options["DiagnosticsFormat"] = "Column"; context.CommandLineOptions["DiagnosticsFormat"] = "/diagnostics:column"; })
             );
 
+            context.SelectOption
+            (
+            Options.Option(Options.Vc.General.TreatAngleIncludeAsExternal.Enable, () => { context.Options["TreatAngleIncludeAsExternal"] = "true"; context.CommandLineOptions["TreatAngleIncludeAsExternal"] = "/external:anglebrackets"; }),
+            Options.Option(Options.Vc.General.TreatAngleIncludeAsExternal.Disable, () => { context.Options["TreatAngleIncludeAsExternal"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["TreatAngleIncludeAsExternal"] = FileGeneratorUtilities.RemoveLineTag; })
+            );
+
+            context.SelectOption
+            (
+            Options.Option(Options.Vc.General.ExternalWarningLevel.Level0, () => { context.Options["ExternalWarningLevel"] = "TurnOffAllWarnings"; context.CommandLineOptions["ExternalWarningLevel"] = "/external:W0"; }),
+            Options.Option(Options.Vc.General.ExternalWarningLevel.Level1, () => { context.Options["ExternalWarningLevel"] = "Level1"; context.CommandLineOptions["ExternalWarningLevel"] = "/external:W1"; }),
+            Options.Option(Options.Vc.General.ExternalWarningLevel.Level2, () => { context.Options["ExternalWarningLevel"] = "Level2"; context.CommandLineOptions["ExternalWarningLevel"] = "/external:W2"; }),
+            Options.Option(Options.Vc.General.ExternalWarningLevel.Level3, () => { context.Options["ExternalWarningLevel"] = "Level3"; context.CommandLineOptions["ExternalWarningLevel"] = "/external:W3"; }),
+            Options.Option(Options.Vc.General.ExternalWarningLevel.Level4, () => { context.Options["ExternalWarningLevel"] = "Level4"; context.CommandLineOptions["ExternalWarningLevel"] = "/external:W4"; }),
+            Options.Option(Options.Vc.General.ExternalWarningLevel.InheritWarningLevel, () => { context.Options["ExternalWarningLevel"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["ExternalWarningLevel"] = FileGeneratorUtilities.RemoveLineTag; })
+            );
+
+            context.SelectOption
+            (
+            Options.Option(Options.Vc.General.ExternalTemplatesDiagnostics.Enable, () => { context.Options["ExternalTemplatesDiagnostics"] = "true"; context.CommandLineOptions["ExternalTemplatesDiagnostics"] = "/external:templates-"; }),
+            Options.Option(Options.Vc.General.ExternalTemplatesDiagnostics.Disable, () => { context.Options["ExternalTemplatesDiagnostics"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["ExternalTemplatesDiagnostics"] = FileGeneratorUtilities.RemoveLineTag; })
+            );
 
             context.Options["TrackFileAccess"] = FileGeneratorUtilities.RemoveLineTag;
 
@@ -497,7 +564,6 @@ namespace Sharpmake.Generators.VisualStudio
                 SelectPreferredToolArchitecture(context);
                 SelectPlatformToolsetOption(context, optionsContext);
             }
-
 
             // Compiler.SuppressStartupBanner
             context.CommandLineOptions["SuppressStartupBanner"] = "/nologo";
@@ -642,7 +708,7 @@ namespace Sharpmake.Generators.VisualStudio
                 context.Options["ForcedUsingFiles"] = ForceUsingFiles.Remove(ForceUsingFiles.Length - 1, 1);
             }
 
-            //Options.Vc.Compiler.CompileAsWinRT.     
+            //Options.Vc.Compiler.CompileAsWinRT.
             //    Disable                                 CompileAsWinRT="false"
             //    Enable                                  CompileAsWinRT="true"
             context.SelectOption
@@ -790,6 +856,7 @@ namespace Sharpmake.Generators.VisualStudio
             Options.Option(Options.Vc.Compiler.EnhancedInstructionSet.SIMD2, () => { context.Options["EnableEnhancedInstructionSet"] = "StreamingSIMDExtensions2"; context.CommandLineOptions["EnableEnhancedInstructionSet"] = "/arch:SSE2"; }),
             Options.Option(Options.Vc.Compiler.EnhancedInstructionSet.AdvancedVectorExtensions, () => { context.Options["EnableEnhancedInstructionSet"] = "AdvancedVectorExtensions"; context.CommandLineOptions["EnableEnhancedInstructionSet"] = "/arch:AVX"; }),
             Options.Option(Options.Vc.Compiler.EnhancedInstructionSet.AdvancedVectorExtensions2, () => { context.Options["EnableEnhancedInstructionSet"] = "AdvancedVectorExtensions2"; context.CommandLineOptions["EnableEnhancedInstructionSet"] = "/arch:AVX2"; }),
+            Options.Option(Options.Vc.Compiler.EnhancedInstructionSet.AdvancedVectorExtensions512, () => { context.Options["EnableEnhancedInstructionSet"] = "AdvancedVectorExtensions512"; context.CommandLineOptions["EnableEnhancedInstructionSet"] = "/arch:AVX512"; }),
             Options.Option(Options.Vc.Compiler.EnhancedInstructionSet.NoEnhancedInstructions, () => { context.Options["EnableEnhancedInstructionSet"] = "NoExtensions"; context.CommandLineOptions["EnableEnhancedInstructionSet"] = "/arch:IA32"; })
             );
 
@@ -813,19 +880,14 @@ namespace Sharpmake.Generators.VisualStudio
             Options.Option(Options.Vc.Compiler.FloatingPointExceptions.Enable, () => { context.Options["FloatingPointExceptions"] = "true"; context.CommandLineOptions["FloatingPointExceptions"] = "/fp:except"; })
             );
 
-            // CreateHotpatchableImage = "false"
-            // CreateHotpatchableImage = "true"     /hotpatch
-            context.CommandLineOptions["CreateHotpatchableImage"] = FileGeneratorUtilities.RemoveLineTag;
-
-
             //Options.Vc.Compiler.CreateHotPatchableCode.
             //    Disable                                 CreateHotPatchableCode="false"
             //    Enable                                  CreateHotPatchableCode="true"                  /hotpatch
             context.SelectOption
             (
-                Options.Option(Options.Vc.Compiler.CreateHotPatchableCode.Default, () => { context.Options["CreateHotPatchableCode"] = FileGeneratorUtilities.RemoveLineTag; ; context.CommandLineOptions["CreateHotPatchableCode"] = FileGeneratorUtilities.RemoveLineTag; ; }),
-                Options.Option(Options.Vc.Compiler.CreateHotPatchableCode.Disable, () => { context.Options["CreateHotPatchableCode"] = "false"; context.CommandLineOptions["CreateHotPatchableCode"] = FileGeneratorUtilities.RemoveLineTag; ; }),
-                Options.Option(Options.Vc.Compiler.CreateHotPatchableCode.Enable, () => { context.Options["CreateHotPatchableCode"] = "true"; context.CommandLineOptions["CreateHotPatchableCode"] = "/hotpatch"; })
+                Options.Option(Options.Vc.Compiler.CreateHotPatchableCode.Default, () => { context.Options["CompilerCreateHotpatchableImage"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["CompilerCreateHotpatchableImage"] = FileGeneratorUtilities.RemoveLineTag; }),
+                Options.Option(Options.Vc.Compiler.CreateHotPatchableCode.Disable, () => { context.Options["CompilerCreateHotpatchableImage"] = "false"; context.CommandLineOptions["CompilerCreateHotpatchableImage"] = FileGeneratorUtilities.RemoveLineTag; }),
+                Options.Option(Options.Vc.Compiler.CreateHotPatchableCode.Enable, () => { context.Options["CompilerCreateHotpatchableImage"] = "true"; context.CommandLineOptions["CompilerCreateHotpatchableImage"] = "/hotpatch"; })
             );
 
             //Options.Vc.Compiler.ConformanceMode.
@@ -857,7 +919,7 @@ namespace Sharpmake.Generators.VisualStudio
 
             //    Disable                                 RemoveUnreferencedCodeData="false"
             //    Enable                                  RemoveUnreferencedCodeData="true"                /Zc:inline
-            if (!context.DevelopmentEnvironment.IsVisualStudio() || context.DevelopmentEnvironment < DevEnv.vs2013)
+            if (!context.DevelopmentEnvironment.IsVisualStudio())
             {
                 context.Options["RemoveUnreferencedCodeData"] = FileGeneratorUtilities.RemoveLineTag;
                 context.CommandLineOptions["RemoveUnreferencedCodeData"] = FileGeneratorUtilities.RemoveLineTag;
@@ -888,7 +950,7 @@ namespace Sharpmake.Generators.VisualStudio
             Options.Option(Options.Vc.Compiler.ForceLoopScope.Enable, () => { context.Options["ForceConformanceInForLoopScope"] = "true"; context.CommandLineOptions["ForceConformanceInForLoopScope"] = "/Zc:forScope"; })
             );
 
-            //Options.Vc.Compiler.OpenMP.   
+            //Options.Vc.Compiler.OpenMP.
             //    Disable                                 OpenMP="false"                                  /openmp-
             //    Enable                                  OpenMP="true"                                   /openmp
             context.SelectOption
@@ -897,8 +959,8 @@ namespace Sharpmake.Generators.VisualStudio
             Options.Option(Options.Vc.Compiler.OpenMP.Enable, () => { context.Options["OpenMP"] = "true"; context.CommandLineOptions["OpenMP"] = "/openmp"; })
             );
 
-            //Options.Vc.Compiler.GenerateXMLDocumentation.   
-            //    Disable                                 GenerateXMLDocumentation="false"                                  
+            //Options.Vc.Compiler.GenerateXMLDocumentation.
+            //    Disable                                 GenerateXMLDocumentation="false"
             //    Enable                                  GenerateXMLDocumentation="true"                                   /openmp
             context.SelectOption
             (
@@ -920,7 +982,8 @@ namespace Sharpmake.Generators.VisualStudio
             (
             Options.Option(Options.Vc.Compiler.CallingConvention.cdecl, () => { context.Options["CallingConvention"] = "Cdecl"; context.CommandLineOptions["CallingConvention"] = "/Gd"; }),
             Options.Option(Options.Vc.Compiler.CallingConvention.fastcall, () => { context.Options["CallingConvention"] = "FastCall"; context.CommandLineOptions["CallingConvention"] = "/Gr"; }),
-            Options.Option(Options.Vc.Compiler.CallingConvention.stdcall, () => { context.Options["CallingConvention"] = "StdCall"; context.CommandLineOptions["CallingConvention"] = "/Gz"; })
+            Options.Option(Options.Vc.Compiler.CallingConvention.stdcall, () => { context.Options["CallingConvention"] = "StdCall"; context.CommandLineOptions["CallingConvention"] = "/Gz"; }),
+            Options.Option(Options.Vc.Compiler.CallingConvention.vectorcall, () => { context.Options["CallingConvention"] = "VectorCall"; context.CommandLineOptions["CallingConvention"] = "/Gv"; })
             );
 
             //Options.Vc.Compiler.ShowIncludes.
@@ -963,18 +1026,22 @@ namespace Sharpmake.Generators.VisualStudio
                 context.CommandLineOptions["SupportJustMyCode"] = FileGeneratorUtilities.RemoveLineTag;
             }
 
-            //Options.Vc.Compiler.SpectreMitigation.
-            //    Default
-            //    Enabled                               SpectreMitigation="Spectre"                       /Qspectre
-            //    Disabled                              SpectreMitigation="false"
             context.SelectOption
             (
             Options.Option(Options.Vc.Compiler.SpectreMitigation.Default, () => { context.Options["SpectreMitigation"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["SpectreMitigation"] = FileGeneratorUtilities.RemoveLineTag; }),
-            Options.Option(Options.Vc.Compiler.SpectreMitigation.Enabled, () => { context.Options["SpectreMitigation"] = "Spectre"; context.CommandLineOptions["SpectreMitigation"] = "/Qspectre"; }),
+            Options.Option(Options.Vc.Compiler.SpectreMitigation.Spectre, () => { context.Options["SpectreMitigation"] = "Spectre"; context.CommandLineOptions["SpectreMitigation"] = "/Qspectre"; }),
+            Options.Option(Options.Vc.Compiler.SpectreMitigation.SpectreLoad, () => { context.Options["SpectreMitigation"] = "SpectreLoad"; context.CommandLineOptions["SpectreMitigation"] = "/Qspectre-load"; }),
+            Options.Option(Options.Vc.Compiler.SpectreMitigation.SpectreLoadCF, () => { context.Options["SpectreMitigation"] = "SpectreLoadCF"; context.CommandLineOptions["SpectreMitigation"] = "/Qspectre-load-cf"; }),
             Options.Option(Options.Vc.Compiler.SpectreMitigation.Disabled, () => { context.Options["SpectreMitigation"] = "false"; context.CommandLineOptions["SpectreMitigation"] = FileGeneratorUtilities.RemoveLineTag; })
             );
 
-            if (context.DevelopmentEnvironment == DevEnv.vs2017 || context.DevelopmentEnvironment == DevEnv.vs2019)
+            context.SelectOption
+            (
+            Options.Option(Options.Vc.Compiler.EnableAsan.Disable, () => { context.Options["EnableASAN"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["EnableASAN"] = FileGeneratorUtilities.RemoveLineTag; }),
+            Options.Option(Options.Vc.Compiler.EnableAsan.Enable, () => { context.Options["EnableASAN"] = "true"; context.CommandLineOptions["EnableASAN"] = "/fsanitize=address"; })
+            );
+
+            if (context.DevelopmentEnvironment.IsVisualStudio() && context.DevelopmentEnvironment >= DevEnv.vs2017)
             {
                 //Options.Vc.Compiler.DefineCPlusPlus. See: https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
                 //    Disable                                 /Zc:__cplusplus-
@@ -1031,6 +1098,8 @@ namespace Sharpmake.Generators.VisualStudio
             // UndefineAllPreprocessorDefinitions
             context.CommandLineOptions["UndefineAllPreprocessorDefinitions"] = FileGeneratorUtilities.RemoveLineTag;
 
+            optionsContext.PlatformVcxproj.SelectPrecompiledHeaderOptions(context);
+
             // Default defines...
             optionsContext.PlatformVcxproj.SelectCompilerOptions(context);
 
@@ -1042,15 +1111,25 @@ namespace Sharpmake.Generators.VisualStudio
             }
 
             // Options.Vc.Compiler.AdditionalOptions
-            if (context.Configuration.AdditionalCompilerOptions.Any())
+            foreach (Tuple<OrderableStrings, string> optionsTuple in new[]
+                    {
+                        Tuple.Create(context.Configuration.AdditionalCompilerOptions, "AdditionalCompilerOptions"),
+                        Tuple.Create(context.Configuration.AdditionalCompilerOptionsOnPCHCreate, "AdditionalCompilerOptionsOnPCHCreate"),
+                        Tuple.Create(context.Configuration.AdditionalCompilerOptionsOnPCHUse, "AdditionalCompilerOptionsOnPCHUse")
+                    })
             {
-                context.Configuration.AdditionalCompilerOptions.Sort();
-                string additionalCompilerOptions = context.Configuration.AdditionalCompilerOptions.JoinStrings(" ");
-                context.Options["AdditionalCompilerOptions"] = additionalCompilerOptions;
-            }
-            else
-            {
-                context.Options["AdditionalCompilerOptions"] = FileGeneratorUtilities.RemoveLineTag;
+                OrderableStrings optionsStrings = optionsTuple.Item1;
+                string optionsKey = optionsTuple.Item2;
+                if (optionsStrings.Any())
+                {
+                    optionsStrings.Sort();
+                    string additionalCompilerOptions = optionsStrings.JoinStrings(" ");
+                    context.Options[optionsKey] = additionalCompilerOptions;
+                }
+                else
+                {
+                    context.Options[optionsKey] = FileGeneratorUtilities.RemoveLineTag;
+                }
             }
 
             optionsContext.HasClrSupport = clrSupport;
@@ -1059,11 +1138,12 @@ namespace Sharpmake.Generators.VisualStudio
         public static List<KeyValuePair<string, string>> ConvertPostBuildCopiesToRelative(Project.Configuration conf, string relativeTo)
         {
             var relativePostBuildCopies = new List<KeyValuePair<string, string>>();
-            if (!conf.ResolvedTargetCopyFiles.Any() && conf.CopyDependenciesBuildStep == null && !conf.EventPostBuildCopies.Any())
+            if (!conf.ResolvedTargetCopyFiles.Any() && conf.CopyDependenciesBuildStep == null && !conf.EventPostBuildCopies.Any() && !conf.ResolvedTargetCopyFilesToSubDirectory.Any())
                 return relativePostBuildCopies;
 
-            relativePostBuildCopies.AddRange(conf.ResolvedTargetCopyFiles.Select(x => new KeyValuePair<string, string>(x, conf.TargetPath)));
+            relativePostBuildCopies.AddRange(conf.ResolvedTargetCopyFiles.Select(x => new KeyValuePair<string, string>(x, conf.TargetCopyFilesPath)));
             relativePostBuildCopies.AddRange(conf.EventPostBuildCopies);
+            relativePostBuildCopies.AddRange(conf.ResolvedTargetCopyFilesToSubDirectory.Select(x => new KeyValuePair<string, string>(x.Key, Path.Combine(conf.TargetPath, x.Value))));
 
             for (int i = 0; i < relativePostBuildCopies.Count;)
             {
@@ -1121,35 +1201,14 @@ namespace Sharpmake.Generators.VisualStudio
 
         private static void SelectPreferredToolArchitecture(IGenerationContext context)
         {
-            switch (context.DevelopmentEnvironment)
+            if (context.DevelopmentEnvironment.IsVisualStudio())
             {
-                case DevEnv.vs2010:
-                case DevEnv.vs2012:
-                    {
-                        // Falling back to <_IsNativeEnvironment> that has same effect
-                        context.Options["PreferredToolArchitecture"] = FileGeneratorUtilities.RemoveLineTag;
-                        context.SelectOption
-                        (
-                        Options.Option(Options.Vc.General.PreferredToolArchitecture.Default, () => { context.Options["_IsNativeEnvironment"] = FileGeneratorUtilities.RemoveLineTag; }),
-                        Options.Option(Options.Vc.General.PreferredToolArchitecture.x86, () => { context.Options["_IsNativeEnvironment"] = "false"; }),
-                        Options.Option(Options.Vc.General.PreferredToolArchitecture.x64, () => { context.Options["_IsNativeEnvironment"] = "true"; })
-                        );
-                    }
-                    break;
-                case DevEnv.vs2013:
-                case DevEnv.vs2015:
-                case DevEnv.vs2017:
-                case DevEnv.vs2019:
-                    {
-                        context.Options["_IsNativeEnvironment"] = FileGeneratorUtilities.RemoveLineTag;
-                        context.SelectOption
-                        (
-                        Options.Option(Options.Vc.General.PreferredToolArchitecture.Default, () => { context.Options["PreferredToolArchitecture"] = FileGeneratorUtilities.RemoveLineTag; }),
-                        Options.Option(Options.Vc.General.PreferredToolArchitecture.x86, () => { context.Options["PreferredToolArchitecture"] = "x86"; }),
-                        Options.Option(Options.Vc.General.PreferredToolArchitecture.x64, () => { context.Options["PreferredToolArchitecture"] = "x64"; })
-                        );
-                    }
-                    break;
+                context.SelectOption
+                (
+                Options.Option(Options.Vc.General.PreferredToolArchitecture.Default, () => { context.Options["PreferredToolArchitecture"] = FileGeneratorUtilities.RemoveLineTag; }),
+                Options.Option(Options.Vc.General.PreferredToolArchitecture.x86, () => { context.Options["PreferredToolArchitecture"] = "x86"; }),
+                Options.Option(Options.Vc.General.PreferredToolArchitecture.x64, () => { context.Options["PreferredToolArchitecture"] = "x64"; })
+                );
             }
         }
 
@@ -1158,18 +1217,11 @@ namespace Sharpmake.Generators.VisualStudio
             context.SelectOption
             (
                 Options.Option(Options.Vc.General.PlatformToolset.Default, () => { context.Options["PlatformToolset"] = context.DevelopmentEnvironment.GetDefaultPlatformToolset(); }),
-                Options.Option(Options.Vc.General.PlatformToolset.v100, () => { context.Options["PlatformToolset"] = "v100"; }),
-                Options.Option(Options.Vc.General.PlatformToolset.v110, () => { context.Options["PlatformToolset"] = "v110"; }),
-                Options.Option(Options.Vc.General.PlatformToolset.v110_xp, () => { context.Options["PlatformToolset"] = "v110_xp"; }),
-                Options.Option(Options.Vc.General.PlatformToolset.v120, () => { context.Options["PlatformToolset"] = "v120"; }),
-                Options.Option(Options.Vc.General.PlatformToolset.v120_xp, () => { context.Options["PlatformToolset"] = "v120_xp"; }),
                 Options.Option(Options.Vc.General.PlatformToolset.v140, () => { context.Options["PlatformToolset"] = "v140"; }),
                 Options.Option(Options.Vc.General.PlatformToolset.v140_xp, () => { context.Options["PlatformToolset"] = "v140_xp"; }),
                 Options.Option(Options.Vc.General.PlatformToolset.v141, () => { context.Options["PlatformToolset"] = "v141"; }),
                 Options.Option(Options.Vc.General.PlatformToolset.v141_xp, () => { context.Options["PlatformToolset"] = "v141_xp"; }),
                 Options.Option(Options.Vc.General.PlatformToolset.v142, () => { context.Options["PlatformToolset"] = "v142"; }),
-                Options.Option(Options.Vc.General.PlatformToolset.LLVM_vs2012, () => { context.Options["PlatformToolset"] = "LLVM-vs2012"; context.Options["TrackFileAccess"] = "false"; }),
-                Options.Option(Options.Vc.General.PlatformToolset.LLVM_vs2014, () => { context.Options["PlatformToolset"] = "LLVM-vs2014"; }),
                 Options.Option(Options.Vc.General.PlatformToolset.LLVM, () => { context.Options["PlatformToolset"] = "llvm"; }),
                 Options.Option(Options.Vc.General.PlatformToolset.ClangCL, () => { context.Options["PlatformToolset"] = "ClangCL"; })
             );
@@ -1213,16 +1265,12 @@ namespace Sharpmake.Generators.VisualStudio
 
         private void GenerateLinkerOptions(IGenerationContext context, ProjectOptionsGenerationContext optionsContext)
         {
-            string outputExtension = context.Configuration.OutputExtension;
-            if (outputExtension.Length > 0 && !outputExtension.StartsWith(".", StringComparison.Ordinal))
-                outputExtension = outputExtension.Insert(0, ".");
-
-            string outputFileName = optionsContext.PlatformVcxproj.GetOutputFileNamePrefix(context, context.Configuration.Output) + optionsContext.TargetName;
+            var configurationTasks = PlatformRegistry.Get<Project.Configuration.IConfigurationTasks>(context.Configuration.Platform);
 
             context.Options["ImportLibrary"] = FileGeneratorUtilities.RemoveLineTag;
             context.CommandLineOptions["ImportLibrary"] = FileGeneratorUtilities.RemoveLineTag;
-            context.Options["OutputFileName"] = outputFileName;
-            context.Options["OutputFileExtension"] = outputExtension;
+            context.Options["OutputFileName"] = context.Configuration.TargetFileFullName;
+            context.Options["OutputFileExtension"] = context.Configuration.TargetFileFullExtension;
 
             context.Options["AdditionalDeploymentFolders"] = "";
 
@@ -1235,16 +1283,16 @@ namespace Sharpmake.Generators.VisualStudio
                 case Project.Configuration.OutputType.DotNetWindowsApp:
                 case Project.Configuration.OutputType.IosApp:
                 case Project.Configuration.OutputType.IosTestBundle:
-                    context.Options["OutputFile"] = optionsContext.OutputDirectoryRelative + Util.WindowsSeparator + outputFileName + outputExtension;
+                    context.Options["OutputFile"] = optionsContext.OutputDirectoryRelative + Util.WindowsSeparator + context.Configuration.TargetFileFullNameWithExtension;
                     if (context.Configuration.Output == Project.Configuration.OutputType.Dll)
                     {
-                        string importLibRelative = optionsContext.OutputLibraryDirectoryRelative + Util.WindowsSeparator + optionsContext.TargetName + ".lib";
+                        string importLibRelative = optionsContext.OutputLibraryDirectoryRelative + Util.WindowsSeparator + context.Configuration.TargetFileFullName + ".lib";
                         context.Options["ImportLibrary"] = importLibRelative;
                         context.CommandLineOptions["ImportLibrary"] = "/IMPLIB:" + FormatCommandLineOptionPath(context, importLibRelative);
                     }
                     break;
                 case Project.Configuration.OutputType.Lib:
-                    context.Options["OutputFile"] = optionsContext.OutputLibraryDirectoryRelative + Util.WindowsSeparator + outputFileName + outputExtension;
+                    context.Options["OutputFile"] = optionsContext.OutputLibraryDirectoryRelative + Util.WindowsSeparator + context.Configuration.TargetFileFullNameWithExtension;
                     break;
                 case Project.Configuration.OutputType.Utility:
                 case Project.Configuration.OutputType.None:
@@ -1256,15 +1304,15 @@ namespace Sharpmake.Generators.VisualStudio
                     throw new ArgumentOutOfRangeException();
             }
 
-            //ShowProgress
-            //    NotSet                                  ShowProgress="0"
-            //    DisplayAllProgressMessages              ShowProgress="1"                            /VERBOSE
-            //    DisplaysSomeProgressMessages            ShowProgress="2"                            /VERBOSE:LIB
             context.SelectOption
             (
             Options.Option(Options.Vc.Linker.ShowProgress.NotSet, () => { context.Options["ShowProgress"] = "NotSet"; context.CommandLineOptions["ShowProgress"] = FileGeneratorUtilities.RemoveLineTag; }),
-            Options.Option(Options.Vc.Linker.ShowProgress.DisplayAllProgressMessages, () => { context.Options["ShowProgress"] = "LinkVerbose"; context.CommandLineOptions["ShowProgress"] = "/VERBOSE"; }),
-            Options.Option(Options.Vc.Linker.ShowProgress.DisplaysSomeProgressMessages, () => { context.Options["ShowProgress"] = "LinkVerboseLib"; context.CommandLineOptions["ShowProgress"] = "/VERBOSE:Lib"; })
+            Options.Option(Options.Vc.Linker.ShowProgress.LinkVerbose, () => { context.Options["ShowProgress"] = "LinkVerbose"; context.CommandLineOptions["ShowProgress"] = "/VERBOSE"; }),
+            Options.Option(Options.Vc.Linker.ShowProgress.LinkVerboseLib, () => { context.Options["ShowProgress"] = "LinkVerboseLib"; context.CommandLineOptions["ShowProgress"] = "/VERBOSE:Lib"; }),
+            Options.Option(Options.Vc.Linker.ShowProgress.LinkVerboseICF, () => { context.Options["ShowProgress"] = "LinkVerboseICF"; context.CommandLineOptions["ShowProgress"] = "/VERBOSE:ICF"; }),
+            Options.Option(Options.Vc.Linker.ShowProgress.LinkVerboseREF, () => { context.Options["ShowProgress"] = "LinkVerboseREF"; context.CommandLineOptions["ShowProgress"] = "/VERBOSE:REF"; }),
+            Options.Option(Options.Vc.Linker.ShowProgress.LinkVerboseSAFESEH, () => { context.Options["ShowProgress"] = "LinkVerboseSAFESEH"; context.CommandLineOptions["ShowProgress"] = "/VERBOSE:SAFESEH"; }),
+            Options.Option(Options.Vc.Linker.ShowProgress.LinkVerboseCLR, () => { context.Options["ShowProgress"] = "LinkVerboseCLR"; context.CommandLineOptions["ShowProgress"] = "/VERBOSE:CLR"; })
             );
 
             //Incremental
@@ -1330,34 +1378,20 @@ namespace Sharpmake.Generators.VisualStudio
             //IgnoreImportLibrary
             //    Enable                                  IgnoreImportLibrary="true"
             //    Disable                                 IgnoreImportLibrary="false"
-            if (context.Configuration.Target.GetFragment<DevEnv>() == DevEnv.vs2010)
-            {
-                context.Options["IgnoreImportLibrary"] = FileGeneratorUtilities.RemoveLineTag;
-            }
-            else
-            {
-                context.SelectOption
-                (
-                Options.Option(Options.Vc.Linker.IgnoreImportLibrary.Enable, () => { context.Options["IgnoreImportLibrary"] = "true"; }),
-                Options.Option(Options.Vc.Linker.IgnoreImportLibrary.Disable, () => { context.Options["IgnoreImportLibrary"] = "false"; })
-                );
-            }
+            context.SelectOption
+            (
+            Options.Option(Options.Vc.Linker.IgnoreImportLibrary.Enable, () => { context.Options["IgnoreImportLibrary"] = "true"; }),
+            Options.Option(Options.Vc.Linker.IgnoreImportLibrary.Disable, () => { context.Options["IgnoreImportLibrary"] = "false"; })
+            );
 
             //RunCodeAnalysis
             //    Enable                                  RunCodeAnalysis="true"
             //    Disable                                 RunCodeAnalysis="false"
-            if (context.Configuration.Target.GetFragment<DevEnv>() == DevEnv.vs2010)
-            {
-                context.Options["RunCodeAnalysis"] = FileGeneratorUtilities.RemoveLineTag;
-            }
-            else
-            {
-                context.SelectOption
-                (
-                Options.Option(Options.Vc.CodeAnalysis.RunCodeAnalysis.Enable, () => { context.Options["RunCodeAnalysis"] = "true"; }),
-                Options.Option(Options.Vc.CodeAnalysis.RunCodeAnalysis.Disable, () => { context.Options["RunCodeAnalysis"] = FileGeneratorUtilities.RemoveLineTag; })
-                );
-            }
+            context.SelectOption
+            (
+            Options.Option(Options.Vc.CodeAnalysis.RunCodeAnalysis.Enable, () => { context.Options["RunCodeAnalysis"] = "true"; }),
+            Options.Option(Options.Vc.CodeAnalysis.RunCodeAnalysis.Disable, () => { context.Options["RunCodeAnalysis"] = FileGeneratorUtilities.RemoveLineTag; })
+            );
 
             //UseLibraryDependencyInputs
             //    Enable                                  UseLibraryDependencyInputs="true"
@@ -1463,15 +1497,17 @@ namespace Sharpmake.Generators.VisualStudio
             Options.Option(Options.Vc.Linker.AssemblyDebug.NoRuntimeTrackingAndEnableOptimizations, () => { context.Options["AssemblyDebug"] = "false"; context.CommandLineOptions["AssemblyDebug"] = "/ASSEMBLYDEBUG:DISABLE"; })
             );
 
-            //SubSystem
-            //    Console                                 SubSystem="1"                           /SUBSYSTEM:CONSOLE
-            //    Windows                                 SubSystem="2"                           /SUBSYSTEM:WINDOWS
-            //    Native                                  SubSystem="3"                           /SUBSYSTEM:NATIVE
             context.SelectOption
             (
+            Options.Option(Options.Vc.Linker.SubSystem.NotSet, () => { context.Options["SubSystem"] = "NotSet"; context.CommandLineOptions["SubSystem"] = FileGeneratorUtilities.RemoveLineTag; }),
             Options.Option(Options.Vc.Linker.SubSystem.Console, () => { context.Options["SubSystem"] = "Console"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:CONSOLE"; }),
-            Options.Option(Options.Vc.Linker.SubSystem.Application, () => { context.Options["SubSystem"] = "Windows"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:WINDOWS"; }),
-            Options.Option(Options.Vc.Linker.SubSystem.Native, () => { context.Options["SubSystem"] = "Native"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:NATIVE"; })
+            Options.Option(Options.Vc.Linker.SubSystem.Windows, () => { context.Options["SubSystem"] = "Windows"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:WINDOWS"; }),
+            Options.Option(Options.Vc.Linker.SubSystem.Native, () => { context.Options["SubSystem"] = "Native"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:NATIVE"; }),
+            Options.Option(Options.Vc.Linker.SubSystem.EFI_Application, () => { context.Options["SubSystem"] = "EFI Application"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:EFI_APPLICATION"; }),
+            Options.Option(Options.Vc.Linker.SubSystem.EFI_Boot_Service_Driver, () => { context.Options["SubSystem"] = "EFI Boot Service Driver"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:EFI_BOOT_SERVICE_DRIVER"; }),
+            Options.Option(Options.Vc.Linker.SubSystem.EFI_ROM, () => { context.Options["SubSystem"] = "EFI ROM"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:EFI_ROM"; }),
+            Options.Option(Options.Vc.Linker.SubSystem.EFI_Runtime, () => { context.Options["SubSystem"] = "EFI Runtime"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:EFI_RUNTIME_DRIVER"; }),
+            Options.Option(Options.Vc.Linker.SubSystem.POSIX, () => { context.Options["SubSystem"] = "POSIX"; context.CommandLineOptions["SubSystem"] = "/SUBSYSTEM:POSIX"; })
             );
 
 
@@ -1525,9 +1561,6 @@ namespace Sharpmake.Generators.VisualStudio
                 }
             }
 
-            //AllowIsolation
-            //    Disabled                                AllowIsolation=false                    /ALLOWISOLATION:NO
-            //    Enable                                  AllowIsolation=true                     /ALLOWISOLATION
             context.SelectOption
             (
             Options.Option(Options.Vc.Linker.AllowIsolation.Enabled, () => { context.Options["AllowIsolation"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["AllowIsolation"] = FileGeneratorUtilities.RemoveLineTag; }),
@@ -1632,6 +1665,7 @@ namespace Sharpmake.Generators.VisualStudio
                 (
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.Default, () => { context.Options["LinkTimeCodeGeneration"] = "false"; context.CommandLineOptions["LinkTimeCodeGeneration"] = FileGeneratorUtilities.RemoveLineTag; }),
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.UseLinkTimeCodeGeneration, () => { context.Options["LinkTimeCodeGeneration"] = "true"; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG"; }),
+                Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.UseFastLinkTimeCodeGeneration, () => { context.Options["LinkTimeCodeGeneration"] = "true"; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG"; }),
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.ProfileGuidedOptimizationInstrument, () => { context.Options["LinkTimeCodeGeneration"] = "true"; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG"; }),
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.ProfileGuidedOptimizationOptimize, () => { context.Options["LinkTimeCodeGeneration"] = "true"; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG"; }),
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.ProfileGuidedOptimizationUpdate, () => { context.Options["LinkTimeCodeGeneration"] = "true"; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG"; })
@@ -1642,6 +1676,7 @@ namespace Sharpmake.Generators.VisualStudio
                 context.SelectOption
                 (
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.Default, () => { context.Options["LinkTimeCodeGeneration"] = "Default"; context.CommandLineOptions["LinkTimeCodeGeneration"] = FileGeneratorUtilities.RemoveLineTag; }),
+                Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.UseFastLinkTimeCodeGeneration, () => { context.Options["LinkTimeCodeGeneration"] = "UseFastLinkTimeCodeGeneration"; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG:incremental"; }),
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.UseLinkTimeCodeGeneration, () => { context.Options["LinkTimeCodeGeneration"] = "UseLinkTimeCodeGeneration"; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG"; }),
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.ProfileGuidedOptimizationInstrument, () => { context.Options["LinkTimeCodeGeneration"] = "PGInstrument"; profileGuideOptimization = true; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG:PGInstrument"; }),
                 Options.Option(Options.Vc.Linker.LinkTimeCodeGeneration.ProfileGuidedOptimizationOptimize, () => { context.Options["LinkTimeCodeGeneration"] = "PGOptimization"; profileGuideOptimization = true; context.CommandLineOptions["LinkTimeCodeGeneration"] = "/LTCG:PGOptimize"; }),
@@ -1652,7 +1687,7 @@ namespace Sharpmake.Generators.VisualStudio
 
             if (profileGuideOptimization)
             {
-                string profileGuidedDatabase = optionsContext.OutputDirectoryRelative + Util.WindowsSeparator + optionsContext.TargetName + ".pgd";
+                string profileGuidedDatabase = optionsContext.OutputDirectoryRelative + Util.WindowsSeparator + context.Configuration.TargetFileFullName + ".pgd";
                 context.Options["ProfileGuidedDatabase"] = profileGuidedDatabase;
                 context.CommandLineOptions["ProfileGuidedDatabase"] = @"/PGD:""" + profileGuidedDatabase + @"""";
             }
@@ -1668,26 +1703,21 @@ namespace Sharpmake.Generators.VisualStudio
             context.Options["FunctionOrder"] = (fctOrder != null) ? fctOrder.Order : FileGeneratorUtilities.RemoveLineTag;
             context.CommandLineOptions["FunctionOrder"] = (fctOrder != null) ? @"/ORDER:@""" + fctOrder.Order + @"""" : FileGeneratorUtilities.RemoveLineTag;
 
-            // ForceFileOutput
             context.SelectOption
             (
             Options.Option(Options.Vc.Linker.ForceFileOutput.Default, () => { context.Options["ForceFileOutput"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["ForceFileOutput"] = FileGeneratorUtilities.RemoveLineTag; }),
-            Options.Option(Options.Vc.Linker.ForceFileOutput.MultiplyDefinedSymbolOnly, () => { context.Options["ForceFileOutput"] = "MultiplyDefinedSymbolOnly"; context.CommandLineOptions["ForceFileOutput"] = "/FORCE:MULTIPLE"; })
+            Options.Option(Options.Vc.Linker.ForceFileOutput.Enable, () => { context.Options["ForceFileOutput"] = "Enabled"; context.CommandLineOptions["ForceFileOutput"] = "/FORCE"; }),
+            Options.Option(Options.Vc.Linker.ForceFileOutput.MultiplyDefinedSymbolOnly, () => { context.Options["ForceFileOutput"] = "MultiplyDefinedSymbolOnly"; context.CommandLineOptions["ForceFileOutput"] = "/FORCE:MULTIPLE"; }),
+            Options.Option(Options.Vc.Linker.ForceFileOutput.UndefinedSymbolOnly, () => { context.Options["ForceFileOutput"] = "UndefinedSymbolOnly"; context.CommandLineOptions["ForceFileOutput"] = "/FORCE:UNRESOLVED"; })
             );
 
-            //CreateHotPatchableImage
-            //    Disable
-            //    Enable                                  CreateHotPatchableImage="Enabled"         /FUNCTIONPADMIN
-            //    X86Image                                CreateHotPatchableImage="X86Image"        /FUNCTIONPADMIN:5
-            //    X64Image                                CreateHotPatchableImage="X64Image"        /FUNCTIONPADMIN:6
-            //    ItaniumImage                            CreateHotPatchableImage="ItaniumImage"    /FUNCTIONPADMIN:16
             context.SelectOption
             (
-                Options.Option(Options.Vc.Linker.CreateHotPatchableImage.Disable, () => { context.Options["CreateHotPatchableImage"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["CreateHotPatchableImage"] = FileGeneratorUtilities.RemoveLineTag; }),
-                Options.Option(Options.Vc.Linker.CreateHotPatchableImage.Enable, () => { context.Options["CreateHotPatchableImage"] = "Enabled"; context.CommandLineOptions["CreateHotPatchableImage"] = "/FUNCTIONPADMIN"; }),
-                Options.Option(Options.Vc.Linker.CreateHotPatchableImage.X86Image, () => { context.Options["CreateHotPatchableImage"] = "X86Image"; context.CommandLineOptions["CreateHotPatchableImage"] = "/FUNCTIONPADMIN:5"; }),
-                Options.Option(Options.Vc.Linker.CreateHotPatchableImage.X64Image, () => { context.Options["CreateHotPatchableImage"] = "X64Image"; context.CommandLineOptions["CreateHotPatchableImage"] = "/FUNCTIONPADMIN:6"; }),
-                Options.Option(Options.Vc.Linker.CreateHotPatchableImage.ItaniumImage, () => { context.Options["CreateHotPatchableImage"] = "ItaniumImage"; context.CommandLineOptions["CreateHotPatchableImage"] = "/FUNCTIONPADMIN:16"; })
+            Options.Option(Options.Vc.Linker.CreateHotPatchableImage.Disable, () => { context.Options["LinkerCreateHotPatchableImage"] = FileGeneratorUtilities.RemoveLineTag; context.CommandLineOptions["LinkerCreateHotPatchableImage"] = FileGeneratorUtilities.RemoveLineTag; }),
+            Options.Option(Options.Vc.Linker.CreateHotPatchableImage.Enable, () => { context.Options["LinkerCreateHotPatchableImage"] = "Enabled"; context.CommandLineOptions["LinkerCreateHotPatchableImage"] = "/FUNCTIONPADMIN"; }),
+            Options.Option(Options.Vc.Linker.CreateHotPatchableImage.X86Image, () => { context.Options["LinkerCreateHotPatchableImage"] = "X86Image"; context.CommandLineOptions["LinkerCreateHotPatchableImage"] = "/FUNCTIONPADMIN:5"; }),
+            Options.Option(Options.Vc.Linker.CreateHotPatchableImage.X64Image, () => { context.Options["LinkerCreateHotPatchableImage"] = "X64Image"; context.CommandLineOptions["LinkerCreateHotPatchableImage"] = "/FUNCTIONPADMIN:6"; }),
+            Options.Option(Options.Vc.Linker.CreateHotPatchableImage.ItaniumImage, () => { context.Options["LinkerCreateHotPatchableImage"] = "ItaniumImage"; context.CommandLineOptions["LinkerCreateHotPatchableImage"] = "/FUNCTIONPADMIN:16"; })
             );
 
             context.SelectOption
@@ -1989,12 +2019,6 @@ namespace Sharpmake.Generators.VisualStudio
             );
         }
 
-        [Obsolete("Use MakeBuildStepName taking the 2 extra arguments projectRootPath and rootPath", error: true)]
-        public static string MakeBuildStepName(Project.Configuration conf, Project.Configuration.BuildStepBase eventBuildStep, Vcxproj.BuildStep buildStep)
-        {
-            return null;
-        }
-
         public static string MakeBuildStepName(Project.Configuration conf, Project.Configuration.BuildStepBase eventBuildStep, Vcxproj.BuildStep buildStep, string projectRootPath, string projectPath)
         {
             if (!eventBuildStep.IsResolved)
@@ -2012,7 +2036,16 @@ namespace Sharpmake.Generators.VisualStudio
 
                 if (isPostBuildCustomActionWithSpecificName)
                 {
-                    execName = @"Exec_" + extractName(cEvent.ExecutableFile) + "_" + (normalizedConfTargetPath + conf.TargetFileFullName + cEvent.ExecutableOtherArguments).GetHashCode().ToString("X8");
+                    execName = @"Exec_"
+                        + extractName(cEvent.ExecutableFile)
+                        + "_"
+                        + (
+                            normalizedConfTargetPath +
+                            conf.TargetFileFullName +
+                            cEvent.ExecutableInputFileArgumentOption +
+                            cEvent.ExecutableOtherArguments
+                          ).
+                        GetHashCode().ToString("X8");
                 }
                 else
                 {
@@ -2095,7 +2128,7 @@ namespace Sharpmake.Generators.VisualStudio
 
                 if (context.Options["EmbedManifest"] == "false")
                 {
-                    string manifestFile = optionsContext.IntermediateDirectoryRelative + Util.WindowsSeparator + optionsContext.TargetName + context.Configuration.ManifestFileSuffix;
+                    string manifestFile = optionsContext.IntermediateDirectoryRelative + Util.WindowsSeparator + context.Configuration.TargetFileFullName + context.Configuration.ManifestFileSuffix;
                     context.Options["ManifestFile"] = manifestFile;
                     context.CommandLineOptions["ManifestFile"] = @"/ManifestFile:""" + FormatCommandLineOptionPath(context, manifestFile) + @"""";
                 }
@@ -2119,17 +2152,12 @@ namespace Sharpmake.Generators.VisualStudio
         private static void SelectGenerateDebugInformationOption(IGenerationContext context, ProjectOptionsGenerationContext optionsContext)
         {
             //GenerateDebugInformation="false"
-            //    VS2012-VS2013
-            //    GenerateDebugInformation.Enable         GenerateDebugInformation="true"           /DEBUG
-            //    GenerateDebugInformation.Disable        GenerateDebugInformation="false"
-            //    (GenerateFullProgramDatabaseFile is ignored, there can only be full pdb files)
-            //
             //    VS2015
             //    GenerateDebugInformation.Enable         GenerateDebugInformation="true"           /DEBUG
             //    GenerateDebugInformation.EnableFastLink GenerateDebugInformation="DebugFastLink"  /DEBUG:FASTLINK
             //    Disable                                 GenerateDebugInformation="No"
             //
-            //    VS2017-VS2019
+            //    VS2017-VS2022
             //    Enable                                  GenerateDebugInformation="true"           /DEBUG
             //    EnableFastLink                          GenerateDebugInformation="DebugFastLink"  /DEBUG:FASTLINK
             //    Disable                                 GenerateDebugInformation="No"
@@ -2159,7 +2187,7 @@ namespace Sharpmake.Generators.VisualStudio
                 else
                 {
                     if (isMicrosoftPlatform && forceFullPDB &&
-                         ((context.DevelopmentEnvironment == DevEnv.vs2017) || (context.DevelopmentEnvironment == DevEnv.vs2019)))
+                         (context.DevelopmentEnvironment.IsVisualStudio() && context.DevelopmentEnvironment >= DevEnv.vs2017))
                     {
                         context.Options["LinkerGenerateDebugInformation"] = "DebugFull";
                         context.CommandLineOptions["LinkerGenerateDebugInformation"] = "/DEBUG:FULL";
@@ -2231,11 +2259,12 @@ namespace Sharpmake.Generators.VisualStudio
 
         private static void SelectGenerateMapFileOption(IGenerationContext context, ProjectOptionsGenerationContext optionsContext)
         {
+            var configurationTasks = PlatformRegistry.Get<Project.Configuration.IConfigurationTasks>(context.Configuration.Platform);
+
             Action enableMapOption = () =>
             {
                 context.Options["GenerateMapFile"] = "true";
-                string targetNamePrefix = optionsContext.PlatformVcxproj.GetOutputFileNamePrefix(context, context.Configuration.Output);
-                string mapFile = Path.Combine(optionsContext.OutputDirectoryRelative, targetNamePrefix + optionsContext.TargetName + ".map");
+                string mapFile = Path.Combine(optionsContext.OutputDirectoryRelative, context.Configuration.TargetFileFullName + ".map");
                 context.Options["MapFileName"] = mapFile;
 
                 string mapFileBffRelative = FormatCommandLineOptionPath(context, mapFile);

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Ubisoft Entertainment
+// Copyright (c) 2017, 2019-2020 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,9 +22,12 @@ namespace Common
         {
             switch (env)
             {
-                case DevEnv.vs2015: return "2015";
-                case DevEnv.vs2017: return "2017";
-                default: return "";
+                case DevEnv.vs2015:
+                    return "2015";
+                case DevEnv.vs2017:
+                    return "2017";
+                default:
+                    return "";
             }
         }
 

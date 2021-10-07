@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Ubisoft Entertainment
+// Copyright (c) 2017-2021 Ubisoft Entertainment
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.Serialization;
@@ -29,16 +30,11 @@ namespace Sharpmake
         internal static string RootPath { get; private set; }
         internal static string[] MainSources { get; private set; }
 
-        [Obsolete("Implement IDebugProjectExtension instead to override sharpmake package version")]
-        public static string PackageVersion { get; set; }
-
-        [Obsolete("Implement IDebugProjectExtension instead to override sharpmake package version")]
-        public static string PackageName { get; set; }
-
         public interface IDebugProjectExtension
         {
             void AddSharpmakePackage(Project.Configuration config);
             void AddReferences(Project.Configuration config, IEnumerable<string> additionalReferences = null);
+            string GetSharpmakeExecutableFullPath();
         }
 
         public class DefaultDebugProjectExtension : IDebugProjectExtension
@@ -76,6 +72,19 @@ namespace Sharpmake
             public virtual bool ShouldUseLocalSharpmakeDll()
             {
                 return true;
+            }
+
+            public virtual string GetSharpmakeExecutableFullPath()
+            {
+                string sharpmakeApplicationExePath = Process.GetCurrentProcess().MainModule.FileName;
+
+                if (Util.IsRunningInMono())
+                {
+                    // When running within Mono, sharpmakeApplicationExePath will at this point wrongly refer to the
+                    // mono (or mono-sgen) executable. Fix it so that it points to Sharpmake.Application.exe.
+                    sharpmakeApplicationExePath = $"{AppDomain.CurrentDomain.BaseDirectory}{AppDomain.CurrentDomain.FriendlyName}";
+                }
+                return sharpmakeApplicationExePath;
             }
         }
 
@@ -204,7 +213,7 @@ namespace Sharpmake
         {
             // define class type
             var assemblyName = new AssemblyName(typeSignature);
-            AssemblyBuilder assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+            AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule("DebugSharpmakeModule");
             TypeBuilder typeBuilder = moduleBuilder.DefineType(typeSignature,
                 TypeAttributes.Public | TypeAttributes.Class |
@@ -226,11 +235,11 @@ namespace Sharpmake
             return new Target(
                 Platform.anycpu,
                 DevEnv.vs2019,
-                Optimization.Debug,
+                Optimization.Debug | Optimization.Release,
                 OutputType.Dll,
                 Blob.NoBlob,
                 BuildSystem.MSBuild,
-                DotNetFramework.v4_7_2
+                Assembler.SharpmakeDotNetFramework
             );
         }
 
@@ -241,20 +250,13 @@ namespace Sharpmake
         /// <param name="startArguments"></param>
         public static void SetupProjectOptions(this Project.Configuration conf, string startArguments)
         {
-            string sharpmakeApplicationExePath = Process.GetCurrentProcess().MainModule.FileName;
-
-            if (Util.IsRunningInMono())
-            {
-                // When running within Mono, sharpmakeApplicationExePath will at this point wrongly refer to the
-                // mono (or mono-sgen) executable. Fix it so that it points to Sharpmake.Application.exe.
-                sharpmakeApplicationExePath = $"{AppDomain.CurrentDomain.BaseDirectory}{AppDomain.CurrentDomain.FriendlyName}";
-            }
-
             conf.CsprojUserFile = new Project.Configuration.CsprojUserFileSettings();
             conf.CsprojUserFile.StartAction = Project.Configuration.CsprojUserFileSettings.StartActionSetting.Program;
-            string quote = Util.IsRunningInMono() ? @"\""" : @""""; // When running in Mono, we must escape "
-            conf.CsprojUserFile.StartArguments = $@"/sources(@{quote}{string.Join(";", MainSources)}{quote}) {startArguments}";
-            conf.CsprojUserFile.StartProgram = sharpmakeApplicationExePath;
+
+            string quote = "\'"; // Use single quote that is cross platform safe
+            conf.CsprojUserFile.StartArguments = $@"/sources(@{quote}{string.Join($"{quote},@{quote}", MainSources)}{quote}) {startArguments}";
+            conf.CsprojUserFile.StartProgram = DebugProjectExtension.GetSharpmakeExecutableFullPath();
+            conf.CsprojUserFile.WorkingDirectory = Directory.GetCurrentDirectory();
         }
     }
 
@@ -269,7 +271,7 @@ namespace Sharpmake
             AddTargets(DebugProjectGenerator.GetTargets());
         }
 
-        [Configure()]
+        [Configure]
         public virtual void Configure(Configuration conf, Target target)
         {
             conf.SolutionPath = DebugProjectGenerator.RootPath;
@@ -307,17 +309,29 @@ namespace Sharpmake
 
             Name = _projectInfo.DisplayName;
 
+            // Use the new csproj style
+            ProjectSchema = CSharpProjectSchema.NetCore;
+
+            // prevents output dir to have a framework subfolder
+            CustomProperties.Add("AppendTargetFrameworkToOutputPath", "false");
+
+            // we need to disable determinism while because we are using wildcards in assembly versions
+            // error CS8357: The specified version string contains wildcards, which are not compatible with determinism
+            CustomProperties.Add("Deterministic", "false");
+
             AddTargets(DebugProjectGenerator.GetTargets());
         }
 
-        [Configure()]
+        [Configure]
         public void ConfigureAll(Configuration conf, Target target)
         {
             conf.ProjectPath = RootPath;
             conf.ProjectFileName = "[project.Name].[target.DevEnv]";
             conf.Output = Configuration.OutputType.DotNetClassLibrary;
 
-            conf.Options.Add(Options.CSharp.LanguageVersion.CSharp7);
+            conf.DefaultOption = target.Optimization == Optimization.Debug ? Options.DefaultTarget.Debug : Options.DefaultTarget.Release;
+
+            conf.Options.Add(Assembler.SharpmakeScriptsCSharpVersion);
 
             conf.Defines.Add(_projectInfo.Defines.ToArray());
 
@@ -330,8 +344,8 @@ namespace Sharpmake
             DebugProjectGenerator.DebugProjectExtension.AddSharpmakePackage(conf);
 
             // set up custom configuration only to setup project
-            if (string.CompareOrdinal(conf.ProjectPath.ToLower(), RootPath.ToLower()) == 0
-                && _projectInfo.IsSetupProject)
+            if (_projectInfo.IsSetupProject &&
+                FileSystemStringComparer.Default.Equals(conf.ProjectPath, RootPath))
             {
                 conf.SetupProjectOptions(_projectInfo.StartArguments);
             }

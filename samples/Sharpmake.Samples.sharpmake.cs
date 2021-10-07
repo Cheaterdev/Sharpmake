@@ -19,6 +19,8 @@ namespace SharpmakeGen.Samples
                 @"\\projects\\",
                 @"\\reference\\"
             );
+
+            DependenciesCopyLocal = DependenciesCopyLocalTypes.None;
         }
 
         public override void ConfigureAll(Configuration conf, Target target)
@@ -26,7 +28,7 @@ namespace SharpmakeGen.Samples
             base.ConfigureAll(conf, target);
 
             conf.SolutionFolder = "Samples";
-            //conf.TargetPath = @"[project.RootPath]\bin\[target.Optimization]\Samples";
+            conf.TargetPath = @"[project.RootPath]\tmp\samples\[target.Optimization]\[project.Name]";
 
             conf.AddPrivateDependency<SharpmakeProject>(target);
             conf.AddPrivateDependency<SharpmakeApplicationProject>(target);
@@ -35,10 +37,9 @@ namespace SharpmakeGen.Samples
             conf.CsprojUserFile = new Project.Configuration.CsprojUserFileSettings
             {
                 StartAction = Project.Configuration.CsprojUserFileSettings.StartActionSetting.Program,
-                StartProgram = @"[project.RootPath]\tmp\bin\[conf.Target.Optimization]\sharpmake.application\Sharpmake.Application.exe",
-                StartArguments = "/sources('[project.SharpmakeMainFile]')",
-                WorkingDirectory = "[project.SourceRootPath]",
-                OverwriteExistingFile = false
+                StartProgram = @"[project.RootPath]\tmp\bin\[conf.Target.Optimization]\Sharpmake.Application.exe",
+                StartArguments = "/sources(@'[project.SharpmakeMainFile]')",
+                WorkingDirectory = "[project.SourceRootPath]"
             };
         }
     }
@@ -117,6 +118,15 @@ namespace SharpmakeGen.Samples
     }
 
     [Generate]
+    public class CustomBuildStepProject : SampleProject
+    {
+        public CustomBuildStepProject()
+        {
+            Name = "CustomBuildStep";
+        }
+    }
+
+    [Generate]
     public class DotNetCoreFrameworkHelloWorldProject : SampleProject
     {
         public DotNetCoreFrameworkHelloWorldProject()
@@ -150,11 +160,60 @@ namespace SharpmakeGen.Samples
     }
 
     [Generate]
+    public class DotNetOSMultiFrameworksHelloWorldProject : SampleProject
+    {
+        public DotNetOSMultiFrameworksHelloWorldProject()
+        {
+            Name = "DotNetOSMultiFrameworksHelloWorld";
+            SharpmakeMainFile = "HelloWorld.sharpmake.cs";
+            SourceRootPath = @"[project.SharpmakeCsPath]\NetCore\[project.Name]";
+        }
+    }
+
+    [Generate]
     public class FastBuildSimpleExecutable : SampleProject
     {
         public FastBuildSimpleExecutable()
         {
             Name = "FastBuildSimpleExecutable";
+        }
+    }
+
+    [Generate]
+    public class HelloClangClProject : SampleProject
+    {
+        public HelloClangClProject()
+        {
+            Name = "HelloClangCl";
+            SharpmakeMainFile = "HelloClangCl.Main.sharpmake.cs";
+
+            // This one is special, we have .sharpmake.cs files in the codebase
+            SourceFilesExcludeRegex.Remove(@"\\codebase\\");
+        }
+
+        public override void ConfigureAll(Configuration conf, Target target)
+        {
+            base.ConfigureAll(conf, target);
+            conf.AddPrivateDependency<SharpmakeGeneratorsProject>(target);
+        }
+    }
+
+    [Generate]
+    public class HelloEventsProject : SampleProject
+    {
+        public HelloEventsProject()
+        {
+            Name = "HelloEvents";
+            SharpmakeMainFile = "HelloEvents.Main.sharpmake.cs";
+
+            // This one is special, we have .sharpmake.cs files in the codebase
+            SourceFilesExcludeRegex.Remove(@"\\codebase\\");
+        }
+
+        public override void ConfigureAll(Configuration conf, Target target)
+        {
+            base.ConfigureAll(conf, target);
+            conf.AddPrivateDependency<SharpmakeGeneratorsProject>(target);
         }
     }
 
@@ -165,6 +224,26 @@ namespace SharpmakeGen.Samples
         {
             Name = "HelloLinux";
             SharpmakeMainFile = "HelloLinux.Main.sharpmake.cs";
+
+            // This one is special, we have .sharpmake.cs files in the codebase
+            SourceFilesExcludeRegex.Remove(@"\\codebase\\");
+        }
+
+        public override void ConfigureAll(Configuration conf, Target target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.AddPrivateDependency<SharpmakeGeneratorsProject>(target);
+        }
+    }
+
+    [Generate]
+    public class HelloAndroidProject : SampleProject
+    {
+        public HelloAndroidProject()
+        {
+            Name = "HelloAndroid";
+            SharpmakeMainFile = "HelloAndroid.Main.sharpmake.cs";
 
             // This one is special, we have .sharpmake.cs files in the codebase
             SourceFilesExcludeRegex.Remove(@"\\codebase\\");
@@ -231,6 +310,16 @@ namespace SharpmakeGen.Samples
         public SimpleExeLibDependencyProject()
         {
             Name = "SimpleExeLibDependency";
+        }
+    }
+
+    [Generate]
+    public class VcpkgProject : SampleProject
+    {
+        public VcpkgProject()
+        {
+            Name = "vcpkg";
+            SharpmakeMainFile = @"sharpmake\main.sharpmake.cs";
         }
     }
 }

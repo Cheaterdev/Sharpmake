@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2018-2021 Ubisoft Entertainment
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,17 +74,27 @@ namespace Sharpmake
                 DefaultPlatform.SetupLibraryPaths(configuration, dependencySetting, dependency);
             }
 
-            public string GetDefaultOutputExtension(Project.Configuration.OutputType outputType)
+            // The below method was replaced by GetDefaultOutputFullExtension
+            // string GetDefaultOutputExtension(OutputType outputType);
+
+            public string GetDefaultOutputFullExtension(Project.Configuration.OutputType outputType)
             {
                 switch (outputType)
                 {
                     case Project.Configuration.OutputType.Exe:
-                        return string.Empty;
+                        return ExecutableFileFullExtension;
                     case Project.Configuration.OutputType.Dll:
-                        return "so";
+                        return SharedLibraryFileFullExtension;
                     default:
-                        return "a";
+                        return StaticLibraryFileFullExtension;
                 }
+            }
+
+            public string GetOutputFileNamePrefix(Project.Configuration.OutputType outputType)
+            {
+                if (outputType != Project.Configuration.OutputType.Exe)
+                    return "lib";
+                return string.Empty;
             }
 
             public IEnumerable<string> GetPlatformLibraryPaths(Project.Configuration configuration)
@@ -94,17 +104,10 @@ namespace Sharpmake
             #endregion
 
             #region IPlatformVcxproj implementation
-            public override string ProgramDatabaseFileExtension => string.Empty;
-            public override string SharedLibraryFileExtension => "so";
-            public override string StaticLibraryFileExtension => "a";
-            public override string ExecutableFileExtension => string.Empty;
-
-            public override string GetOutputFileNamePrefix(IGenerationContext context, Project.Configuration.OutputType outputType)
-            {
-                if (outputType != Project.Configuration.OutputType.Exe)
-                    return "lib";
-                return string.Empty;
-            }
+            public override string ProgramDatabaseFileFullExtension => string.Empty;
+            public override string SharedLibraryFileFullExtension => ".so";
+            public override string StaticLibraryFileFullExtension => ".a";
+            public override string ExecutableFileFullExtension => string.Empty;
 
             public override void GeneratePlatformSpecificProjectDescription(IVcxprojGenerationContext context, IFileGenerator generator)
             {
@@ -123,11 +126,12 @@ namespace Sharpmake
                     {
                         case DevEnv.vs2017:
                         case DevEnv.vs2019:
+                        case DevEnv.vs2022:
                             {
                                 // _PlatformFolder override is not enough for android, we need to know the AdditionalVCTargetsPath
                                 // Note that AdditionalVCTargetsPath is not officially supported by vs2017, but we use the variable anyway for convenience and consistency
                                 if (!string.IsNullOrEmpty(MSBuildGlobalSettings.GetCppPlatformFolder(devEnv, SharpmakePlatform)))
-                                    throw new Error("SetCppPlatformFolder is not supported by AndroidPlatform correctly: use of MSBuildGlobalSettings.SetCppPlatformFolder should be replaced by use of MSBuildGlobalSettings.SetAdditionalVCTargetsPath.");
+                                    throw new Error($"SetCppPlatformFolder is not supported by {devEnv}: use of MSBuildGlobalSettings.SetCppPlatformFolder should be replaced by use of MSBuildGlobalSettings.SetAdditionalVCTargetsPath.");
 
                                 string additionalVCTargetsPath = MSBuildGlobalSettings.GetAdditionalVCTargetsPath(devEnv, SharpmakePlatform);
                                 if (!string.IsNullOrEmpty(additionalVCTargetsPath))
@@ -180,7 +184,7 @@ namespace Sharpmake
                 base.GenerateProjectPlatformSdkDirectoryDescription(context, generator);
 
                 var devEnv = context.DevelopmentEnvironmentsRange.MinDevEnv;
-                if (devEnv == DevEnv.vs2019)
+                if (devEnv.IsVisualStudio() && devEnv >= DevEnv.vs2019)
                 {
                     string additionalVCTargetsPath = MSBuildGlobalSettings.GetAdditionalVCTargetsPath(devEnv, SharpmakePlatform);
                     if (!string.IsNullOrEmpty(additionalVCTargetsPath))
@@ -193,7 +197,7 @@ namespace Sharpmake
                 base.GeneratePostDefaultPropsImport(context, generator);
 
                 var devEnv = context.DevelopmentEnvironmentsRange.MinDevEnv;
-                if (devEnv == DevEnv.vs2017 || devEnv == DevEnv.vs2019)
+                if (devEnv.IsVisualStudio() && devEnv >= DevEnv.vs2017)
                 {
                     // in case we've written an additional vc targets path, we need to set a couple of properties to avoid a warning
                     if (!string.IsNullOrEmpty(MSBuildGlobalSettings.GetAdditionalVCTargetsPath(devEnv, SharpmakePlatform)))
@@ -241,6 +245,9 @@ namespace Sharpmake
 
                 var sdkIncludePaths = GetSdkIncludePaths(context);
                 options["IncludePath"] = sdkIncludePaths.JoinStrings(";");
+
+                var androidBuildType = GetBuildTypeString(context);
+                options["androidBuildType"] = androidBuildType;
             }
 
             public override void SelectCompilerOptions(IGenerationContext context)
@@ -423,6 +430,13 @@ namespace Sharpmake
                 );
             }
 
+            public override void SelectPrecompiledHeaderOptions(IGenerationContext context)
+            {
+                base.SelectPrecompiledHeaderOptions(context);
+
+                FixupPrecompiledHeaderOptions(context);
+            }
+
             public override void SelectLinkerOptions(IGenerationContext context)
             {
                 var options = context.Options;
@@ -529,6 +543,25 @@ namespace Sharpmake
                 androidIncludePaths.Add(@"$(VS_NdkRoot)\sysroot\usr\include\" + archIncludePath);
 
                 return androidIncludePaths;
+            }
+
+            private string GetBuildTypeString(IGenerationContext context)
+            {
+                var conf = context.Configuration;
+
+                AndroidBuildType buildType = AndroidBuildType.Ant;
+                conf.Target.TryGetFragment<Sharpmake.Android.AndroidBuildType>(out buildType);
+
+                switch (buildType)
+                {
+                    // To build using Ant the AndroidBuiltType must not exist in the Android vsproj
+                    case AndroidBuildType.Ant:
+                        return FileGeneratorUtilities.RemoveLineTag;
+                    case AndroidBuildType.Gradle:
+                        return "Gradle";
+                    default:
+                        throw new System.Exception(string.Format("Unsupported Android build type: {0}", buildType));
+                }
             }
 
             #endregion // IPlatformVcxproj implementation

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,21 +30,6 @@ namespace Sharpmake
     public enum DevEnv
     {
         /// <summary>
-        /// Visual Studio 2010.
-        /// </summary>
-        vs2010 = 1 << 0,
-
-        /// <summary>
-        /// Visual Studio 2012
-        /// </summary>
-        vs2012 = 1 << 1,
-
-        /// <summary>
-        /// Visual Studio 2013
-        /// </summary>
-        vs2013 = 1 << 2,
-
-        /// <summary>
         /// Visual Studio 2015
         /// </summary>
         vs2015 = 1 << 3,
@@ -60,48 +45,54 @@ namespace Sharpmake
         vs2019 = 1 << 5,
 
         /// <summary>
+        /// Visual Studio 2022
+        /// </summary>
+        vs2022 = 1 << 6,
+
+        /// <summary>
         /// iOS project with Xcode.
         /// </summary>
-        xcode4ios = 1 << 6,
+        xcode4ios = 1 << 7,
 
         /// <summary>
         /// Eclipse.
         /// </summary>
-        eclipse = 1 << 7,
+        eclipse = 1 << 8,
 
         /// <summary>
         /// GNU Makefiles.
         /// </summary>
-        make = 1 << 8,
+        make = 1 << 9,
 
         /// <summary>
         /// All supported Visual Studio versions.
         /// </summary>
         [CompositeFragment]
-        VisualStudio = vs2010 | vs2012 | vs2013 | vs2015 | vs2017 | vs2019
+        VisualStudio = vs2015 | vs2017 | vs2019 | vs2022,
+
+        [Obsolete("Sharpmake doesn't support vs2010 anymore.")]
+        vs2010 = -1,
+        [Obsolete("Sharpmake doesn't support vs2012 anymore.")]
+        vs2012 = -1,
+        [Obsolete("Sharpmake doesn't support vs2013 anymore.")]
+        vs2013 = -1,
     }
 
     // Mandatory
     [Fragment, Flags]
     public enum Platform
     {
-        win32      = 1 << 0,
-        win64      = 1 << 1,
-        anycpu     = 1 << 2,
-        x360       = 1 << 3,
-        durango    = 1 << 4,
-        ps3        = 1 << 5,
-        ps3spu     = 1 << 6,
-        orbis      = 1 << 7,
-        wii        = 1 << 8,
-        wiiu       = 1 << 9,
-        nx         = 1 << 10,
-        nvshield   = 1 << 11,
-        ctr        = 1 << 12,
-        ios        = 1 << 13,
-        android    = 1 << 14,
-        linux      = 1 << 15,
-        mac        = 1 << 16,
+        win32 = 1 << 0,
+        win64 = 1 << 1,
+        anycpu = 1 << 2,
+        durango = 1 << 3,
+        orbis = 1 << 4,
+        nx = 1 << 5,
+        ctr = 1 << 6,
+        ios = 1 << 7,
+        android = 1 << 8,
+        linux = 1 << 9,
+        mac = 1 << 10,
 
         _reserved9 = 1 << 22,
         _reserved8 = 1 << 23,
@@ -112,6 +103,19 @@ namespace Sharpmake
         _reserved3 = 1 << 28,
         _reserved2 = 1 << 29,
         _reserved1 = 1 << 30,
+
+        [Obsolete]
+        x360 = -1,
+        [Obsolete]
+        ps3 = -1,
+        [Obsolete]
+        ps3spu = -1,
+        [Obsolete]
+        wii = -1,
+        [Obsolete]
+        wiiu = -1,
+        [Obsolete]
+        nvshield = -1,
     }
 
     [Fragment, Flags]
@@ -144,43 +148,57 @@ namespace Sharpmake
         [Obsolete("Please use at least .net framework 3.5.", error: false)]
         v3 = v3_5,
 
-        v3_5              = 1 << 0,
+        v3_5 = 1 << 0,
         v3_5clientprofile = 1 << 1,
-        v4_0              = 1 << 2,
-        v4_5              = 1 << 3,
-        v4_5_1            = 1 << 4,
-        v4_5_2            = 1 << 5,
+        v4_0 = 1 << 2,
+        v4_5 = 1 << 3,
+        v4_5_1 = 1 << 4,
+        v4_5_2 = 1 << 5,
         v4_5clientprofile = 1 << 6,
-        v4_6              = 1 << 7,
-        v4_6_1            = 1 << 8,
-        v4_6_2            = 1 << 9,
-        v4_7              = 1 << 10,
-        v4_7_1            = 1 << 11,
-        v4_7_2            = 1 << 12,
-        v4_8              = 1 << 13,
-        netcore1_0        = 1 << 14,
-        netcore1_1        = 1 << 15,
-        netcore2_0        = 1 << 16,
-        netcore2_1        = 1 << 17,
-        netcore2_2        = 1 << 18,
-        netcore3_0        = 1 << 19,
-        netcore3_1        = 1 << 20,
-        netstandard1_0    = 1 << 21,
-        netstandard1_1    = 1 << 22,
-        netstandard1_2    = 1 << 23,
-        netstandard1_3    = 1 << 24,
-        netstandard1_4    = 1 << 25,
-        netstandard1_5    = 1 << 26,
-        netstandard1_6    = 1 << 27,
-        netstandard2_0    = 1 << 28,
-        netstandard2_1    = 1 << 29,
+        v4_6 = 1 << 7,
+        v4_6_1 = 1 << 8,
+        v4_6_2 = 1 << 9,
+        v4_7 = 1 << 10,
+        v4_7_1 = 1 << 11,
+        v4_7_2 = 1 << 12,
+        v4_8 = 1 << 13,
+        netcore1_0 = 1 << 14,
+        netcore1_1 = 1 << 15,
+        netcore2_0 = 1 << 16,
+        netcore2_1 = 1 << 17,
+        netcore2_2 = 1 << 18,
+        netcore3_0 = 1 << 19,
+        netcore3_1 = 1 << 20,
+        net5_0 = 1 << 21,
+        netstandard1_0 = 1 << 22,
+        netstandard1_1 = 1 << 23,
+        netstandard1_2 = 1 << 24,
+        netstandard1_3 = 1 << 25,
+        netstandard1_4 = 1 << 26,
+        netstandard1_5 = 1 << 27,
+        netstandard1_6 = 1 << 28,
+        netstandard2_0 = 1 << 29,
+        netstandard2_1 = 1 << 30,
 
         [CompositeFragment]
         all_netframework = v3_5 | v3_5clientprofile | v4_0 | v4_5 | v4_5_1 | v4_5_2 | v4_5clientprofile | v4_6 | v4_6_1 | v4_6_2 | v4_7 | v4_7_1 | v4_7_2 | v4_8,
         [CompositeFragment]
-        all_netcore = netcore1_0 | netcore1_1 | netcore2_0 | netcore2_1 | netcore3_0 | netcore3_1,
+        all_netcore = netcore1_0 | netcore1_1 | netcore2_0 | netcore2_1 | netcore3_0 | netcore3_1 | net5_0,
         [CompositeFragment]
         all_netstandard = netstandard1_0 | netstandard1_1 | netstandard1_2 | netstandard1_3 | netstandard1_4 | netstandard1_5 | netstandard1_6 | netstandard2_0 | netstandard2_1
+    }
+
+    // https://docs.microsoft.com/en-us/dotnet/standard/frameworks#net-5-os-specific-tfms
+    [Fragment, Flags]
+    public enum DotNetOS
+    {
+        Default = 1 << 0,
+        android = 1 << 1,
+        ios = 1 << 2,
+        macos = 1 << 3,
+        tvos = 1 << 4,
+        watchos = 1 << 5,
+        windows = 1 << 6
     }
 
     // Optional
@@ -445,7 +463,7 @@ namespace Sharpmake
             }
         }
 
-        public bool AndMask(Object fragmentMask)
+        public bool AndMask(object fragmentMask)
         {
             FieldInfo[] fragmentFields = GetType().GetFields();
 
@@ -712,10 +730,25 @@ namespace Sharpmake
 
         public void AddFragmentMask(params object[] masks)
         {
+            var fragmentTypes = TargetType.GetFields();
+
             foreach (var mask in masks)
             {
                 Type maskType = mask.GetType();
                 ITarget.ValidFragmentType(maskType);
+                if (!fragmentTypes.Any(fragmentType => fragmentType.FieldType == maskType))
+                {
+                    throw new Error(
+                        "Fragment mask type '{0}' is not present in this target, here is the list of valid types:\n- {1}",
+                        maskType,
+                        string.Join(
+                            "\n- ",
+                            fragmentTypes
+                                .Select(fragmentType => Util.ToNiceTypeName(fragmentType.FieldType))
+                                .OrderBy(type => type, StringComparer.InvariantCultureIgnoreCase)
+                        )
+                    );
+                }
 
                 List<int> maskValues;
                 if (_fragmentMasks == null || !_fragmentMasks.TryGetValue(maskType, out maskValues))
@@ -731,6 +764,14 @@ namespace Sharpmake
 
                 maskValues.Add((int)mask);
             }
+        }
+
+        /// <summary>
+        /// This method will remove all the masks that were added, if any
+        /// </summary>
+        public void ClearFragmentMasks()
+        {
+            _fragmentMasks = null;
         }
 
         /// <summary>

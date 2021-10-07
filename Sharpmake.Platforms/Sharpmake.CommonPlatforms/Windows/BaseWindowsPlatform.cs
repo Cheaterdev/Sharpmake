@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ namespace Sharpmake
                     case Project.Configuration.OutputType.Exe:
                         context.SelectOption(
                             Options.Option(Options.Vc.Linker.SubSystem.Console, () => { defines.Add("_CONSOLE"); }),
-                            Options.Option(Options.Vc.Linker.SubSystem.Application, () => { defines.Add("_WINDOWS"); }));
+                            Options.Option(Options.Vc.Linker.SubSystem.Windows, () => { defines.Add("_WINDOWS"); }));
                         break;
                     case Project.Configuration.OutputType.Lib:
                         defines.Add("_LIB");
@@ -85,24 +85,15 @@ namespace Sharpmake
                 var conf = context.Configuration;
                 var devEnv = context.DevelopmentEnvironment;
 
-                // vs2012 and vs2013 do not support overriding windows kits using the underlying variables
-                // so we need to change the VC++ directories path.
                 // We need to override the executable path for vs2015 because WindowsKit UAP.props does not
                 // correctly set the WindowsSDK_ExecutablePath to the bin folder of its current version.
-                if ((devEnv == DevEnv.vs2012 || devEnv == DevEnv.vs2013 || devEnv == DevEnv.vs2015) && !KitsRootPaths.UsesDefaultKitRoot(devEnv))
+                if (devEnv == DevEnv.vs2015 && !KitsRootPaths.UsesDefaultKitRoot(devEnv))
                 {
-                    var options = context.Options;
-                    options["ExecutablePath"] = devEnv.GetWindowsExecutablePath(conf.Platform);
-                    if (devEnv != DevEnv.vs2015)
-                    {
-                        options["IncludePath"] = devEnv.GetWindowsIncludePath();
-                        options["LibraryPath"] = devEnv.GetWindowsLibraryPath(conf.Platform, Util.IsDotNet(conf) ? conf.Target.GetFragment<DotNetFramework>() : default(DotNetFramework?));
-                        options["ExcludePath"] = devEnv.GetWindowsIncludePath();
-                    }
+                    context.Options["ExecutablePath"] = devEnv.GetWindowsExecutablePath(conf.Platform);
                 }
 
                 Options.Vc.General.PlatformToolset platformToolset = Options.GetObject<Options.Vc.General.PlatformToolset>(conf);
-                if (platformToolset.IsLLVMToolchain())
+                if (Options.Vc.General.PlatformToolset.LLVM == platformToolset)
                 {
                     Options.Vc.General.PlatformToolset overridenPlatformToolset = Options.Vc.General.PlatformToolset.Default;
                     if (Options.WithArgOption<Options.Vc.General.PlatformToolset>.Get<Options.Clang.Compiler.LLVMVcPlatformToolset>(conf, ref overridenPlatformToolset))
@@ -123,10 +114,24 @@ namespace Sharpmake
                 if (systemIncludes.Count > 0)
                 {
                     systemIncludes.Sort();
-                    if (context.Options["IncludePath"] == FileGeneratorUtilities.RemoveLineTag)
-                        context.Options["IncludePath"] = "$(VC_IncludePath);$(WindowsSDK_IncludePath);" + systemIncludes.JoinStrings(";");
+                    string systemIncludesString = Util.PathGetRelative(context.ProjectDirectory, systemIncludes).JoinStrings(";");
+
+                    // this option is mandatory when using /external:I with msvc, so if the user has selected it
+                    // we consider that the vcxproj supports ExternalIncludePath
+                    if (Options.HasOption<Options.Vc.General.ExternalWarningLevel>(conf))
+                    {
+                        if (context.Options["ExternalIncludePath"] == FileGeneratorUtilities.RemoveLineTag)
+                            context.Options["ExternalIncludePath"] = systemIncludesString;
+                        else
+                            context.Options["ExternalIncludePath"] += ";" + systemIncludesString;
+                    }
                     else
-                        context.Options["IncludePath"] += ";" + systemIncludes.JoinStrings(";");
+                    {
+                        if (context.Options["IncludePath"] == FileGeneratorUtilities.RemoveLineTag)
+                            context.Options["IncludePath"] = "$(VC_IncludePath);$(WindowsSDK_IncludePath);" + systemIncludesString;
+                        else
+                            context.Options["IncludePath"] += ";" + systemIncludesString;
+                    }
                 }
             }
             #endregion

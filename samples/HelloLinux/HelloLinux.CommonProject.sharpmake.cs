@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2020-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ namespace HelloLinux
         /*     SHARPMAKE DEFAULT IS 0     */
         public const int Blobbing = 10;
         public const int BuildSystem = 30;
+        public const int PostAll = 100;
     }
 
     public abstract class CommonProject : Sharpmake.Project
@@ -61,9 +62,23 @@ namespace HelloLinux
             //       different names per configurations to work properly...
             //conf.TargetFileName += "_" + target.Optimization.ToString().ToLowerInvariant().First(); // suffix with lowered first letter of optim
             //if (conf.IsFastBuild)
-                //conf.TargetFileName += "x";
+            //conf.TargetFileName += "x";
 
             conf.Output = Configuration.OutputType.Lib; // defaults to creating static libs
+        }
+
+        [ConfigurePriority(ConfigurePriorities.PostAll)]
+        [Configure]
+        public virtual void PostConfigureAll(Configuration conf, CommonTarget target)
+        {
+            if (conf.Output == Configuration.OutputType.Exe || conf.Output == Configuration.OutputType.Dll)
+            {
+                // Create a separate package directory before building.
+                string packageDir = $@"{Globals.TmpDirectory}/package";
+                conf.EventPreBuild.Add($"mkdir -p {packageDir}");
+                // Copy the build result to the package directory.
+                conf.EventPostBuild.Add($@"cp [conf.TargetPath]/[conf.TargetFileFullNameWithExtension] {packageDir}");
+            }
         }
 
         ////////////////////////////////////////////////////////////////////////

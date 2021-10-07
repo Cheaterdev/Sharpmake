@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Ubisoft Entertainment
+// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 using System;
+using System.Collections.Generic;
 
 namespace Sharpmake
 {
@@ -57,6 +58,11 @@ namespace Sharpmake
         public static string CachePath = null;
 
         /// <summary>
+        /// Additional settings to add to the global settings node.
+        /// </summary>
+        public static readonly IList<string> AdditionalGlobalSettings = new List<string>();
+
+        /// <summary>
         /// Path to the fastbuild plugin dll if any. This typically will be the path to the Ubisoft asset store plugin DLL but could be any other compatible implementation.
         /// CachePath must also be set to an appropriate url.
         /// </summary>
@@ -87,6 +93,7 @@ namespace Sharpmake
         public static bool FastBuildFastCancel = false;
         public static bool FastBuildUseIDE = true;
         public static bool FastBuildNoUnity = false;
+        public static bool FastBuildValidateCopyFiles = true;
 
         /// <summary>
         /// Allows retention of build state across BFF changes. Requires v0.97
@@ -97,25 +104,6 @@ namespace Sharpmake
         public static int FastBuildWorkerConnectionLimit = -1;
 
         // Configuration Files Generation Settings
-
-        /// <summary>
-        /// Include the IDE version in master bff filename
-        /// </summary>
-        [Obsolete("MasterBff is now named after the solution")]
-        public static bool IncludeCompilerInMasterBFFFilename = true;
-
-        /// <summary>
-        /// Separate the Master bff content per platform
-        /// </summary>
-        [Obsolete("MasterBff contains what its solution contains")]
-        public static bool SeparateMasterBFFPerPlatform = false;
-
-        /// <summary>
-        /// The path of the master BFF is the folder relative to the source tree root.
-        /// ex: "projects"
-        /// </summary>
-        [Obsolete("MasterBff is now in the same folder as the solution")]
-        public static string FastBuildMasterBFFPath = null; // PLEASE OVERRIDE this in your Sharpmake main
 
         /// <summary>
         /// The path to the executable used to start a fastbuild compilation. This path is relative to the source tree root.
@@ -158,7 +146,7 @@ namespace Sharpmake
         /// be found in the same folder as link.exe, and if not add the path
         /// to one in the global settings Environment section, in the PATH variable
         /// </summary>
-        public static bool SetPathToResourceCompilerInEnvironment = false;
+        public static bool SetPathToResourceCompilerInEnvironment = true;
 
         /// <summary>
         /// This is used to activate a workaround in fastbuild for the VS2012 preprocessor enum bug. 
@@ -183,6 +171,17 @@ namespace Sharpmake
         /// It seems that by adding a space between the enum keyword and the name it avoids that problem that looks like memory corruption in the compiler.
         /// Also it seems that this doesn't occurs with VS2013.
         /// </remarks>
+        [Obsolete("Sharpmake doesn't support generating for vs2012 anymore, so this setting is useless.", error: false)]
         public static bool EnableVS2012EnumBugWorkaround = false; // activate workaround for VS2012 enum bug(corrupted preprocessor output).
+
+        /// <summary>
+        /// FastBuild names of compilers to set the 'UseRelativePaths_Experimental' option for.
+        /// </summary>
+        public static readonly ISet<string> CompilersUsingRelativePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Additional settings to add to the Compiler node, keyed by compiler name.
+        /// </summary>
+        public static readonly IDictionary<string, IList<string>> AdditionalCompilerSettings = new Dictionary<string, IList<string>>(StringComparer.OrdinalIgnoreCase);
     }
 }

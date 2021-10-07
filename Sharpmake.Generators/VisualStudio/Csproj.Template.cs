@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Ubisoft Entertainment
+// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ namespace Sharpmake.Generators.VisualStudio
 <Project ToolsVersion=""[toolsVersion]"" xmlns=""http://schemas.microsoft.com/developer/msbuild/2003"">
 ";
                 public static string ProjectBeginNetCore =
-@"<Project Sdk=""[sdkVersion]"">
+@"<Project>
 ";
 
                 public static string ProjectEnd =
@@ -54,6 +54,7 @@ namespace Sharpmake.Generators.VisualStudio
     <FileAlignment>[options.FileAlignment]</FileAlignment>
     <IsWebBootstrapper>[options.IsWebBootstrapper]</IsWebBootstrapper>
     <ProjectTypeGuids>[projectTypeGuids]</ProjectTypeGuids>
+    <IsPublishable>[options.IsPublishable]</IsPublishable>
     <PublishUrl>[options.PublishUrl]</PublishUrl>
     <InstallUrl>[options.InstallUrl]</InstallUrl>
     <ManifestKeyFile>[options.ManifestKeyFile]</ManifestKeyFile>
@@ -112,6 +113,8 @@ namespace Sharpmake.Generators.VisualStudio
     <GenerateAssemblyInformationalVersionAttribute>[GeneratedAssemblyConfigTemplate.GenerateAssemblyInformationalVersionAttribute]</GenerateAssemblyInformationalVersionAttribute>
     <RestoreProjectStyle>[NugetRestoreProjectStyleString]</RestoreProjectStyle>
     <ProductVersion>[options.ProductVersion]</ProductVersion>
+    <UseWpf>[options.UseWpf]</UseWpf>
+    <UseWindowsForms>[options.UseWindowsForms]</UseWindowsForms>
   </PropertyGroup>
 ";
 
@@ -154,6 +157,10 @@ namespace Sharpmake.Generators.VisualStudio
 ";
                 public static string ImportProjectItem =
 @"  <Import Project=""[importProject]"" Condition=""[importCondition]"" />
+";
+
+                public static string ImportProjectSdkItem =
+@"  <Import Project=""[importProject]"" Sdk=""[sdkVersion]"" />
 ";
 
                 public static string VsixConfiguration =
@@ -504,6 +511,14 @@ namespace Sharpmake.Generators.VisualStudio
 
                 public static string CompileBegin =
 @"    <Compile Include=""[include]"">
+";
+
+                public static string SimpleCompileWithExclude =
+@"    <Compile Include=""[include]"" Exclude=""[exclude]""/>
+";
+
+                public static string CompileBeginWithExclude =
+@"    <Compile Include=""[include]"" Exclude=""[exclude]"">
 ";
 
                 public static string CompileEnd =

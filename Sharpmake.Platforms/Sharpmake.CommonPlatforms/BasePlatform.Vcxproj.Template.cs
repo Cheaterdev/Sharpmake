@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ namespace Sharpmake
       <EnableEnhancedInstructionSet>[options.EnableEnhancedInstructionSet]</EnableEnhancedInstructionSet>
       <FloatingPointModel>[options.FloatingPointModel]</FloatingPointModel>
       <FloatingPointExceptions>[options.FloatingPointExceptions]</FloatingPointExceptions>
-      <CreateHotpatchableImage>false</CreateHotpatchableImage>
+      <CreateHotpatchableImage>[options.CompilerCreateHotpatchableImage]</CreateHotpatchableImage>
       <ConformanceMode>[options.ConformanceMode]</ConformanceMode>
       <DisableLanguageExtensions>[options.DisableLanguageExtensions]</DisableLanguageExtensions>
       <TreatWChar_tAsBuiltInType>[options.TreatWChar_tAsBuiltInType]</TreatWChar_tAsBuiltInType>
@@ -62,6 +62,7 @@ namespace Sharpmake
       <ForceConformanceInForLoopScope>[options.ForceConformanceInForLoopScope]</ForceConformanceInForLoopScope>
       <RuntimeTypeInfo>[options.RuntimeTypeInfo]</RuntimeTypeInfo>
       <OpenMPSupport>[options.OpenMP]</OpenMPSupport>
+      <LanguageStandard_C>[options.LanguageStandard_C]</LanguageStandard_C>
       <LanguageStandard>[options.LanguageStandard]</LanguageStandard>
       <ExpandAttributedSource>false</ExpandAttributedSource>
       <AssemblerOutput>NoListing</AssemblerOutput>
@@ -137,6 +138,7 @@ namespace Sharpmake
       <GenerateWindowsMetadata>[options.GenerateWindowsMetadata]</GenerateWindowsMetadata>
       <WindowsMetadataFile>[options.WindowsMetadataFile]</WindowsMetadataFile>
       <TreatLinkerWarningAsErrors>[options.TreatLinkerWarningAsErrors]</TreatLinkerWarningAsErrors>
+      <CreateHotPatchableImage>[options.LinkerCreateHotPatchableImage]</CreateHotPatchableImage>
     </Link>
 ";
 
@@ -173,7 +175,7 @@ namespace Sharpmake
     <ConfigurationType>[options.ConfigurationType]</ConfigurationType>
     <UseDebugLibraries>[options.UseDebugLibraries]</UseDebugLibraries>
     <PreferredToolArchitecture>[options.PreferredToolArchitecture]</PreferredToolArchitecture>
-    <_IsNativeEnvironment>[options._IsNativeEnvironment]</_IsNativeEnvironment>
+    <TranslateIncludes>[options.TranslateIncludes]</TranslateIncludes>
     <CharacterSet>[options.CharacterSet]</CharacterSet>
     <UseOfMfc>[options.UseOfMfc]</UseOfMfc>
     <CLRSupport>[clrSupport]</CLRSupport>
@@ -183,6 +185,10 @@ namespace Sharpmake
     <CLRSupport>[options.CLRSupport]</CLRSupport>
     <WindowsTargetPlatformVersion>[options.WindowsTargetPlatformVersion]</WindowsTargetPlatformVersion>
     <SpectreMitigation>[options.SpectreMitigation]</SpectreMitigation>
+    <EnableASAN>[options.EnableASAN]</EnableASAN>
+    <TreatAngleIncludeAsExternal>[options.TreatAngleIncludeAsExternal]</TreatAngleIncludeAsExternal>
+    <ExternalWarningLevel>[options.ExternalWarningLevel]</ExternalWarningLevel>
+    <ExternalTemplatesDiagnostics>[options.ExternalTemplatesDiagnostics]</ExternalTemplatesDiagnostics>
   </PropertyGroup>
 ";
 
@@ -205,8 +211,16 @@ namespace Sharpmake
     <CustomBuildAfterTargets>[options.CustomBuildStepAfterTargets]</CustomBuildAfterTargets>
     <ExecutablePath>[options.ExecutablePath]</ExecutablePath>
     <IncludePath>[options.IncludePath]</IncludePath>
+    <ExternalIncludePath>[options.ExternalIncludePath]</ExternalIncludePath>
+    <ReferencePath>[options.ReferencePath]</ReferencePath>
     <LibraryPath>[options.LibraryPath]</LibraryPath>
+    <LibraryWPath>[options.LibraryWPath]</LibraryWPath>
+    <SourcePath>[options.SourcePath]</SourcePath>
     <ExcludePath>[options.ExcludePath]</ExcludePath>
+    <PublicIncludeDirectories>[options.PublicIncludeDirectories]</PublicIncludeDirectories>
+    <AllProjectIncludesArePublic>[options.AllProjectIncludesArePublic]</AllProjectIncludesArePublic>
+    <PublicModuleDirectories>[options.PublicModuleDirectories]</PublicModuleDirectories>
+    <AllProjectBMIsArePublic>[options.AllProjectBMIsArePublic]</AllProjectBMIsArePublic>
     <DisableFastUpToDateCheck>[options.DisableFastUpToDateCheck]</DisableFastUpToDateCheck>
     <EnableManagedIncrementalBuild>[options.EnableManagedIncrementalBuild]</EnableManagedIncrementalBuild>
     <UseClangCl>[options.UseClangCl]</UseClangCl>
@@ -261,7 +275,7 @@ del ""[options.OutputDirectory]\[conf.TargetFileFullName].pdb"" >NUL 2>NUL</NMak
     <NMakeOutput>[options.OutputFile]</NMakeOutput>
     <NMakePreprocessorDefinitions>[options.PreprocessorDefinitions]</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath>[options.AdditionalIncludeDirectories]</NMakeIncludeSearchPath>
-    <TargetFileName>[options.OutputFileName].exe</TargetFileName>
+    <NMakeForcedIncludes>[options.ForcedIncludeFiles]</NMakeForcedIncludes>
   </PropertyGroup>
 ";
 
@@ -275,6 +289,7 @@ del ""[options.OutputDirectory]\[conf.TargetFileFullName].pdb"" >NUL 2>NUL</NMak
     <NMakeOutput>[conf.CustomBuildSettings.OutputFile]</NMakeOutput>
     <NMakePreprocessorDefinitions>[options.PreprocessorDefinitions]</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath>[options.AdditionalIncludeDirectories]</NMakeIncludeSearchPath>
+    <NMakeForcedIncludes>[options.ForcedIncludeFiles]</NMakeForcedIncludes>
   </PropertyGroup>
 ";
     }

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -343,6 +343,14 @@ namespace Sharpmake.Generators.VisualStudio
 
                 public static string ProjectFilesForcedIncludeVanilla =
                 @"      <ForcedIncludeFiles Condition=""'$(Configuration)|$(Platform)'=='[conf.Name]|[platformName]'"">[options.ForcedIncludeFilesVanilla]</ForcedIncludeFiles>
+";
+
+                public static string ProjectFilesAdditionalForcedInclude =
+                @"      <ForcedIncludeFiles Condition=""'$(Configuration)|$(Platform)'=='[conf.Name]|[platformName]'"">%(ForcedIncludeFiles);[ForcedIncludeFiles]</ForcedIncludeFiles>
+";
+
+                public static string ProjectFilesAdditionalForcedIncludeVanilla =
+                @"      <ForcedIncludeFiles Condition=""'$(Configuration)|$(Platform)'=='[conf.Name]|[platformName]'"">[options.ForcedIncludeFilesVanilla];[ForcedIncludeFiles]</ForcedIncludeFiles>
 ";
 
                 public static string ProjectFilesSourceExcludeFromBuild =

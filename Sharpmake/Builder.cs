@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -129,6 +129,7 @@ namespace Sharpmake
         private bool _cleanBlobsOnly = false;
         public bool BlobOnly = false;
         public bool Diagnostics = false;
+        private readonly bool _debugScripts = false;
         private ThreadPool _tasks;
         // Keep all instances of manually built (and loaded) assemblies, as they may be needed by other assemblies on load (command line).
         private readonly ConcurrentDictionary<string, Assembly> _builtAssemblies = new ConcurrentDictionary<string, Assembly>(); // Assembly Full Path -> Assembly
@@ -230,10 +231,11 @@ namespace Sharpmake
             writer.Flush();
 
             var generationOutput = new GenerationOutput();
-            if (Util.FileWriteIfDifferentInternal(new FileInfo(filePath), mStream, bypassAutoCleanupDatabase: true))
-                generationOutput.Generated.Add(filePath);
+            var fileInfo = new FileInfo(filePath);
+            if (Util.FileWriteIfDifferentInternal(fileInfo, mStream, bypassAutoCleanupDatabase: true))
+                generationOutput.Generated.Add(fileInfo.FullName);
             else
-                generationOutput.Skipped.Add(filePath);
+                generationOutput.Skipped.Add(fileInfo.FullName);
 
             ReportGenerated(typeof(TraceFile), generationOutput);
         }
@@ -261,6 +263,7 @@ namespace Sharpmake
             bool blobOnly,
             bool skipInvalidPath,
             bool diagnostics,
+            bool debugScripts,
             Func<IGeneratorManager> getGeneratorsManagerCallBack,
             HashSet<string> defines)
         {
@@ -271,6 +274,7 @@ namespace Sharpmake
             _cleanBlobsOnly = cleanBlobsOnly;
             BlobOnly = blobOnly;
             Diagnostics = diagnostics;
+            _debugScripts = debugScripts;
             SkipInvalidPath = skipInvalidPath;
             _getGeneratorsManagerCallBack = getGeneratorsManagerCallBack;
             _getGeneratorsManagerCallBack().InitializeBuilder(this);
@@ -291,6 +295,10 @@ namespace Sharpmake
                 _tasks.Start(nbThreads);
             }
         }
+
+        [Obsolete("Use the builder with the new debugScripts argument", error: false)]
+        public Builder(BuildContext.BaseBuildContext context, bool multithreaded, bool dumpDependencyGraph, bool cleanBlobsOnly, bool blobOnly, bool skipInvalidPath, bool diagnostics, Func<IGeneratorManager> getGeneratorsManagerCallBack, HashSet<string> defines)
+            : this(context, multithreaded, dumpDependencyGraph, cleanBlobsOnly, blobOnly, skipInvalidPath, diagnostics, true, getGeneratorsManagerCallBack, defines) { }
 
         public void Dispose()
         {
@@ -344,15 +352,8 @@ namespace Sharpmake
             if (entryPointMethodInfo == null)
                 return;
 
-            try
-            {
-                entryPointMethodInfo.Invoke(null, new object[] { Arguments });
-            }
-            catch (TargetInvocationException e)
-            {
-                if (e.InnerException != null)
-                    throw e.InnerException;
-            }
+
+            entryPointMethodInfo.Invoke(null, new object[] { Arguments });
         }
 
         private bool _profilingEnabled = false;
@@ -681,8 +682,8 @@ namespace Sharpmake
                 !type.IsDefined(typeof(Export), false))
                     throw new Error("cannot generate solution type without [Sharpmake.Generate], [Sharpmake.Compile] or [Sharpmake.Export] attribute: {0}", type.Name);
 
-                // Create the project instance
-                Solution solution = Solution.CreateProject(type, Arguments.FragmentMasks);
+                // Create the solution instance
+                Solution solution = Solution.CreateSolution(type, Arguments.FragmentMasks);
 
                 // Pre event
                 EventPreSolutionConfigure?.Invoke(solution);
@@ -830,7 +831,7 @@ namespace Sharpmake
 
         public void ReportGenerated(Type t, GenerationOutput output)
         {
-            var generationOutput = _generationReport.GetValueOrAdd(t, new GenerationOutput());
+            var generationOutput = _generationReport.GetOrAdd(t, new GenerationOutput());
             generationOutput.Merge(output);
         }
 
@@ -1194,10 +1195,13 @@ namespace Sharpmake
 
             public BuilderCompileErrorBehavior CompileErrorBehavior { get; }
 
+            public bool DebugScripts { get; }
+
             public BuilderContext(Builder builder, BuilderCompileErrorBehavior compileErrorBehavior)
             {
                 _builder = builder;
                 CompileErrorBehavior = compileErrorBehavior;
+                DebugScripts = builder._debugScripts;
             }
 
             public ILoadInfo BuildAndLoadSharpmakeFiles(IEnumerable<ISourceAttributeParser> parsers, IEnumerable<IParsingFlowParser> flowParsers, params string[] files)

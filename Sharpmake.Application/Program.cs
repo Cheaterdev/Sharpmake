@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2017 Ubisoft Entertainment
+﻿// Copyright (c) 2017-2021 Ubisoft Entertainment
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sharpmake.Generators;
@@ -58,19 +59,19 @@ namespace Sharpmake.Application
 
         public static void LogWrite(string message)
         {
-            string prefix = String.Empty;
+            string prefix = string.Empty;
 
             if (DebugEnable)
             {
                 TimeSpan span = DateTime.Now - s_startTime;
-                prefix = String.Format("[{0:00}:{1:00}] ", span.Minutes, span.Seconds);
+                prefix = string.Format("[{0:00}:{1:00}] ", span.Minutes, span.Seconds);
                 message = prefix + message;
             }
 
             Console.Write(message);
             if (Debugger.IsAttached)
             {
-                message = message.Replace(prefix + Util.CallerInfoTag, String.Empty);
+                message = message.Replace(prefix + Util.CallerInfoTag, string.Empty);
                 Trace.Write(message);
             }
         }
@@ -90,18 +91,11 @@ namespace Sharpmake.Application
             DebugWrite(string.Format(format, args));
         }
 
-        public static void DebugWrite(string message)
+        public static void DebugWrite(string msg)
         {
             if (DebugEnable)
             {
-                TimeSpan span = DateTime.Now - s_startTime;
-
-                string prefix = String.Format("[{0:00}:{1:00}] ", span.Minutes, span.Seconds);
-                message = prefix + message;
-
-                Console.Write(message);
-                if (Debugger.IsAttached)
-                    Trace.Write(message);
+                LogWrite(msg);
             }
         }
 
@@ -124,9 +118,7 @@ namespace Sharpmake.Application
         public static void WarningWrite(string msg)
         {
             Interlocked.Increment(ref s_warningCount);
-            Console.Write(msg);
-            if (Debugger.IsAttached)
-                Trace.Write(msg);
+            LogWrite("[WARNING]" + msg);
         }
 
         public static void WarningWriteLine(string format, params object[] args)
@@ -147,9 +139,7 @@ namespace Sharpmake.Application
         public static void ErrorWrite(string msg)
         {
             Interlocked.Increment(ref s_errorCount);
-            Console.Write(msg);
-            if (Debugger.IsAttached)
-                Trace.Write(msg);
+            LogWrite("[ERROR]" + msg);
         }
 
         public static void ErrorWriteLine(string format, params object[] args)
@@ -168,11 +158,25 @@ namespace Sharpmake.Application
         {
             if (CommandLine.ContainParameter("breakintodebugger"))
             {
-                System.Windows.Forms.MessageBox.Show("Debugger requested. Please attach a debugger and press OK");
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                {
+                    System.Windows.Forms.MessageBox.Show("Debugger requested. Please attach a debugger and press OK");
+                }
+                else
+                {
+                    Console.WriteLine("Debugger requested. Please attach a debugger and press ENTER to continue");
+                    while (Console.ReadKey(true).Key != ConsoleKey.Enter)
+                    {
+                        Console.WriteLine("Press ENTER to continue");
+                    }
+                }
                 Debugger.Break();
             }
             // This GC gives a little bit better results than the other ones. "LowLatency" is giving really bad results(twice slower than the other ones).
             System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency;
+
+            AppDomain currentDomain = AppDomain.CurrentDomain;
+            currentDomain.UnhandledException += AppDomain_UnhandledException;
 
             Mutex oneInstanceMutex = null;
             Argument parameters = new Argument();
@@ -192,16 +196,20 @@ namespace Sharpmake.Application
                     if (DebugEnable && informationalVersion != null)
                         versionString += " " + informationalVersion;
                 }
+
                 LogWriteLine($"sharpmake {versionString}");
-                LogWriteLine("  arguments : {0}", CommandLine.GetProgramCommandLine());
-                LogWriteLine("  directory : {0}", Directory.GetCurrentDirectory());
+                LogWriteLine("  arguments: {0}", CommandLine.GetProgramCommandLine());
+                LogWriteLine("  directory: {0}", Directory.GetCurrentDirectory());
+                LogWriteLine("  platform: {0} - {1}", Util.GetExecutingPlatform().ToString(), RuntimeInformation.OSDescription);
+                LogWriteLine("  compiled with framework: {0}", Util.FrameworkDisplayName());
+                LogWriteLine("  running on framework: {0}", RuntimeInformation.FrameworkDescription);
                 LogWriteLine(string.Empty);
 
                 // display help if wanted and quit
                 if ((CommandLine.GetProgramCommandLine().Length == 0) || CommandLine.ContainParameter("help"))
                 {
                     LogWriteLine(CommandLine.GetCommandLineHelp(typeof(Argument), false));
-                    return (int)ExitCode.Success;
+                    return CommandLine.ContainParameter("help") ? (int)ExitCode.Success : (int)ExitCode.Error;
                 }
 
                 AppDomain.CurrentDomain.AssemblyLoad += AppDomain_AssemblyLoad;
@@ -407,6 +415,14 @@ namespace Sharpmake.Application
             LogSharpmakeExtensionLoaded(args.LoadedAssembly);
         }
 
+        private static void AppDomain_UnhandledException(object sender, UnhandledExceptionEventArgs unhandledExceptionEventArgs)
+        {
+            LogWriteLine(Environment.NewLine + "Unhandled exception Error:");
+            LogWriteLine(Util.GetCompleteExceptionMessage(unhandledExceptionEventArgs.ExceptionObject as Exception, "\t"));
+
+            Environment.Exit((int)ExitCode.UnknownError);
+        }
+
         private static void LogSharpmakeExtensionLoaded(Assembly extensionAssembly)
         {
             if (extensionAssembly == null)
@@ -430,7 +446,7 @@ namespace Sharpmake.Application
 
         private static void CreateBuilderAndGenerate(BuildContext.BaseBuildContext buildContext, Argument parameters, bool generateDebugSolution)
         {
-            using (Builder builder = CreateBuilder(buildContext, parameters, true, generateDebugSolution))
+            using (Builder builder = CreateBuilder(buildContext, parameters, allowCleanBlobs: true, generateDebugSolution: generateDebugSolution))
             {
                 if (parameters.CleanBlobsOnly)
                 {
@@ -478,7 +494,10 @@ namespace Sharpmake.Application
                 ExtensionMethods.ClearVisualStudioDirCaches();
             }
 
-            CreateBuilderAndGenerate(buildContext, parameters, generateDebugSolution: false);
+            if (!parameters.GenerateDebugSolutionOnly)
+            {
+                CreateBuilderAndGenerate(buildContext, parameters, generateDebugSolution: false);
+            }
         }
 
         private static ExitCode AnalyzeConfigureOrder(Argument parameters, bool stopOnFirstError)
@@ -588,8 +607,9 @@ namespace Sharpmake.Application
                 parameters.BlobOnly,
                 parameters.SkipInvalidPath,
                 parameters.Diagnostics,
-                Program.GetGeneratorsManager,
-                parameters.Defines
+                debugScripts: true, // warning: some code that rely on callstacks misbehaves in release, because methods can completely disappear due to optimizations, so force disable for now
+                getGeneratorsManagerCallBack: GetGeneratorsManager,
+                defines: parameters.Defines
             );
 
             // Allow message log from builder.
@@ -655,7 +675,7 @@ namespace Sharpmake.Application
             ++nested;
             foreach (var dependent in method.Dependents.OrderBy(x => x.Method.ToString()))
             {
-                set.Add(String.Format("[{0}]->[{1}]", dependent, method));
+                set.Add(string.Format("[{0}]->[{1}]", dependent, method));
 
                 if (dependent.Dependents.Any())
                     RecursivePrintMethodInfo(dependent, set, nested);
