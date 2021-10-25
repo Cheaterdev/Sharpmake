@@ -895,7 +895,7 @@ namespace Sharpmake
             /// Both <see cref="PrecompHeader"/> and <see cref="PrecompSource"/> must be <c>null</c> if
             /// the project doesn't have precompiled headers.
             /// <para>
-            /// Sharpmake assumes that a relative path here is relative to <see cref="Project.SourceRootPath"/>.
+            /// Sharpmake assumes that a relative path here is relative to <see cref="SourceRootPath"/>.
             /// If that isn't correct, you must use an absolute path.
             /// </para>
             /// </remarks>
@@ -911,7 +911,7 @@ namespace Sharpmake
             /// the project doesn't have precompiled headers.
             /// <para>
             /// Sharpmake assumes that any relative path entered here is relative to
-            /// <see cref="Project.SourceRootPath"/>. If that isn't correct, you must use an absolute path.
+            /// <see cref="SourceRootPath"/>. If that isn't correct, you must use an absolute path.
             /// </para>
             /// <note>
             /// The source files must manually include this header or you will have
@@ -1997,7 +1997,7 @@ namespace Sharpmake
             public FileCustomBuild CustomBuildForAllIncludes = null;
 
             /// <summary>
-            /// Gets the <see cref="Project"/> that this <see cref="Project.Configuration"/>
+            /// Gets the <see cref="Project"/> that this <see cref="Configuration"/>
             /// belongs to.
             /// </summary>
             /// <remarks>
@@ -2277,6 +2277,12 @@ namespace Sharpmake
             /// Generate relative paths in places where it would be otherwise beneficial to use absolute paths.
             /// </summary>
             public bool PreferRelativePaths = true;
+
+            /// <summary>
+            /// Configuration OS version if not defined as Target fragment.
+            /// </summary>
+            /// <remarks>This allow adding OS version to specific DotNetFramework during configuration without altering Target's matching system</remarks>
+            public DotNetOS DotNetOSVersion = DotNetOS.Default;
 
             /// <summary>
             /// Optional OS version at the end of the TargetFramework, for example, net5.0-ios13.0.
