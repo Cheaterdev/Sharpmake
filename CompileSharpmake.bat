@@ -14,7 +14,7 @@ if not exist %VSWHERE% (
 )
 
 set VSMSBUILDCMD=
-for /f "usebackq delims=" %%i in (`%VSWHERE% -latest -products * -property installationPath`) do (
+for /f "usebackq delims=" %%i in (`%VSWHERE% -%VS_TYPE% -products * -property installationPath`) do (
   if exist "%%i\Common7\Tools\VsMSBuildCmd.bat" (
     set VSMSBUILDCMD="%%i\Common7\Tools\VsMSBuildCmd.bat"
   )
